@@ -10,6 +10,7 @@ import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { AppRoles } from '../../../core/constants/roles.constants';
 import { Order, OrderStatus } from '../../../core/models/order.model';
 import { filter } from 'rxjs/operators';
 
@@ -48,7 +49,7 @@ export class OrderListComponent implements OnInit {
       return;
     }
 
-    if (!this.authService.hasAnyRole(['SuperAdmin', 'Manager', 'Waiter'])) {
+    if (!this.authService.hasAnyRole([AppRoles.Manager, AppRoles.Waiter])) {
       this.snackBar.open('You do not have permission to access this page', 'Close', { duration: 5000 });
       this.router.navigate(['/dashboard']);
       return;

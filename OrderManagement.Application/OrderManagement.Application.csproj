@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\OrderManagement.Domain\OrderManagement.Domain.csproj" />
+    <ProjectReference Include="..\OrderManagement.Identity\OrderManagement.Identity.csproj" />
   </ItemGroup>
 
   <ItemGroup>

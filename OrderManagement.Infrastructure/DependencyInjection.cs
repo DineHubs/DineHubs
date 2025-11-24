@@ -18,6 +18,7 @@ using OrderManagement.Application.Navigation;
 using OrderManagement.Application.Ordering;
 using OrderManagement.Application.Payments;
 using OrderManagement.Application.Reporting;
+using OrderManagement.Infrastructure.Tenancy;
 using OrderManagement.Application.Subscriptions;
 using OrderManagement.Application.Tenants;
 using OrderManagement.Domain.Identity;
@@ -36,7 +37,10 @@ using OrderManagement.Infrastructure.Payments;
 using OrderManagement.Infrastructure.Persistence;
 using OrderManagement.Infrastructure.Reporting;
 using OrderManagement.Infrastructure.Subscriptions;
-using OrderManagement.Infrastructure.Tenancy;
+using OrderManagement.Application.Branches;
+using OrderManagement.Application.Users;
+using OrderManagement.Infrastructure.Branches;
+using OrderManagement.Infrastructure.Users;
 
 namespace OrderManagement.Infrastructure;
 
@@ -127,6 +131,9 @@ public static class DependencyInjection
             .AddRedis(configuration.GetValue<string>("Redis:Configuration") ?? "localhost:6379", name: "redis");
 
         services.AddFeatureManagement();
+
+        services.AddScoped<IBranchService, BranchService>();
+        services.AddScoped<IUserService, UserService>();
 
         return services;
     }

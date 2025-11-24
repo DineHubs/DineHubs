@@ -1,7 +1,21 @@
-<div class="settings-container">
-  <h1>Settings</h1>
-  <mat-card>
-    <p>Settings coming soon...</p>
-  </mat-card>
-</div>
+<div class="settings-page">
+  <div class="page-header">
+    <h1>Settings</h1>
+    <p>Manage your restaurant configuration, branches, and users.</p>
+  </div>
 
+  <div class="settings-content">
+    <mat-tab-group animationDuration="0ms" mat-stretch-tabs="false" class="custom-tabs">
+      <mat-tab label="Branches">
+        <div class="tab-content">
+          <app-branch-management></app-branch-management>
+        </div>
+      </mat-tab>
+      <mat-tab label="Users">
+        <div class="tab-content">
+          <app-user-management></app-user-management>
+        </div>
+      </mat-tab>
+    </mat-tab-group>
+  </div>
+</div>

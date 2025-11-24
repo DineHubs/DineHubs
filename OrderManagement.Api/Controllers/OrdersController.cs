@@ -86,7 +86,7 @@ public class OrdersController(
     }
 
     [HttpPatch("{id:guid}/status")]
-    [Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.Kitchen},{SystemRoles.Manager}")]
+    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Kitchen}")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromQuery] OrderStatus status, CancellationToken cancellationToken)
     {
         var order = await dbContext.Orders.FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
@@ -101,6 +101,7 @@ public class OrdersController(
     }
 
     [HttpPost("qr")]
+    [AllowAnonymous]
     public async Task<IActionResult> GenerateQrSession([FromBody] string tableNumber, CancellationToken cancellationToken)
     {
         if (tenantContext.BranchId is null)

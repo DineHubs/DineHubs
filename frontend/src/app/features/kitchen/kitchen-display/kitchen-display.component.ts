@@ -9,6 +9,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { Router } from '@angular/router';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { AppRoles } from '../../../core/constants/roles.constants';
 import { Order, OrderStatus } from '../../../core/models/order.model';
 import { interval, Subscription } from 'rxjs';
 
@@ -37,7 +38,7 @@ export class KitchenDisplayComponent implements OnInit, OnDestroy {
   orders: Order[] = [];
   isLoading = false;
   OrderStatus = OrderStatus; // Expose enum to template
-  
+
   ngOnInit(): void {
     // Check if user has required role
     if (!this.authService.isAuthenticated()) {
@@ -45,7 +46,7 @@ export class KitchenDisplayComponent implements OnInit, OnDestroy {
       return;
     }
 
-    if (!this.authService.hasAnyRole(['SuperAdmin', 'Kitchen', 'Manager'])) {
+    if (!this.authService.hasAnyRole([AppRoles.Kitchen, AppRoles.Manager])) {
       this.snackBar.open('You do not have permission to access this page', 'Close', { duration: 5000 });
       this.router.navigate(['/dashboard']);
       return;

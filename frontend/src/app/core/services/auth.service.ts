@@ -5,13 +5,15 @@ import { tap, catchError } from 'rxjs/operators';
 import { ApiService } from './api.service';
 import { User, LoginRequest, LoginResponse } from '../models/user.model';
 
+import { AppRoles } from '../constants/roles.constants';
+
 @Injectable({
   providedIn: 'root'
 })
 export class AuthService {
   private apiService = inject(ApiService);
   private router = inject(Router);
-  
+
   private readonly TOKEN_KEY = 'access_token';
   private readonly USER_KEY = 'user_data';
 
@@ -64,21 +66,17 @@ export class AuthService {
   hasAnyRole(roles: string[]): boolean {
     const user = this.currentUser();
     if (!user) return false;
-    // SuperAdmin has access to everything
-    if (user.roles.includes('SuperAdmin')) {
-      return true;
-    }
     return roles.some(role => user.roles.includes(role));
   }
 
   isSuperAdmin(): boolean {
-    return this.hasRole('SuperAdmin');
+    return this.hasRole(AppRoles.SuperAdmin);
   }
 
   private loadUserFromStorage(): void {
     const token = this.getToken();
     const userStr = localStorage.getItem(this.USER_KEY);
-    
+
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr) as User;

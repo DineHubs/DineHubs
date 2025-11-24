@@ -14,6 +14,7 @@ namespace OrderManagement.Api.Controllers;
 public class ReportsController(IReportingService reportingService, ITenantContext tenantContext) : ControllerBase
 {
     [HttpGet("sales")]
+    [Authorize(Roles = $"{SystemRoles.Admin},{SystemRoles.Manager},{SystemRoles.Waiter},{SystemRoles.Kitchen},{SystemRoles.InventoryManager}")]
     public async Task<IActionResult> GetSales([FromQuery] DateTimeOffset from, [FromQuery] DateTimeOffset to, CancellationToken cancellationToken)
     {
         var result = await reportingService.GetSalesSummaryAsync(tenantContext.TenantId, tenantContext.BranchId, from, to, cancellationToken);
@@ -21,6 +22,7 @@ public class ReportsController(IReportingService reportingService, ITenantContex
     }
 
     [HttpGet("inventory")]
+    [Authorize(Roles = $"{SystemRoles.Admin},{SystemRoles.Manager},{SystemRoles.Waiter},{SystemRoles.Kitchen},{SystemRoles.InventoryManager}")]
     public async Task<IActionResult> GetInventory(CancellationToken cancellationToken)
     {
         var result = await reportingService.GetInventoryForecastAsync(tenantContext.TenantId, cancellationToken);
@@ -28,7 +30,7 @@ public class ReportsController(IReportingService reportingService, ITenantContex
     }
 
     [HttpGet("subscription")]
-    [Authorize(Roles = "SuperAdmin,Admin")]
+    [Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.Admin}")]
     public async Task<IActionResult> GetSubscriptionUsage(CancellationToken cancellationToken)
     {
         var result = await reportingService.GetSubscriptionUsageAsync(tenantContext.TenantId, cancellationToken);

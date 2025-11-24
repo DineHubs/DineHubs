@@ -13,6 +13,7 @@ import { MatInputModule } from '@angular/material/input';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { AppRoles } from '../../../core/constants/roles.constants';
 import { MenuItem } from '../../../core/models/menu-item.model';
 import { MenuItemFormComponent } from '../menu-item-form/menu-item-form.component';
 import { Router } from '@angular/router';
@@ -59,7 +60,7 @@ export class MenuListComponent implements OnInit {
       return;
     }
 
-    if (!this.authService.hasAnyRole(['SuperAdmin', 'Admin', 'Manager'])) {
+    if (!this.authService.hasAnyRole([AppRoles.Admin, AppRoles.Manager])) {
       this.snackBar.open('You do not have permission to access this page', 'Close', { duration: 5000 });
       this.router.navigate(['/dashboard']);
       return;
@@ -111,8 +112,8 @@ export class MenuListComponent implements OnInit {
 
     if (this.searchTerm) {
       const term = this.searchTerm.toLowerCase();
-      filtered = filtered.filter(item => 
-        item.name.toLowerCase().includes(term) || 
+      filtered = filtered.filter(item =>
+        item.name.toLowerCase().includes(term) ||
         item.category.toLowerCase().includes(term)
       );
     }
