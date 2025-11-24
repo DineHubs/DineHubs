@@ -1,0 +1,57 @@
+<h2 mat-dialog-title>{{ isEditMode ? 'Edit' : 'Add' }} Menu Item</h2>
+
+<mat-dialog-content>
+  <form [formGroup]="menuItemForm" (ngSubmit)="onSubmit()">
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Name</mat-label>
+      <input matInput formControlName="name" required>
+      @if (menuItemForm.get('name')?.hasError('required') && menuItemForm.get('name')?.touched) {
+        <mat-error>Name is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Category</mat-label>
+      <mat-select formControlName="category" required>
+        @for (category of categories; track category) {
+          <mat-option [value]="category">{{ category }}</mat-option>
+        }
+      </mat-select>
+      @if (menuItemForm.get('category')?.hasError('required') && menuItemForm.get('category')?.touched) {
+        <mat-error>Category is required</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Price (RM)</mat-label>
+      <input matInput type="number" formControlName="price" required step="0.01" min="0.01">
+      @if (menuItemForm.get('price')?.hasError('required') && menuItemForm.get('price')?.touched) {
+        <mat-error>Price is required</mat-error>
+      }
+      @if (menuItemForm.get('price')?.hasError('min') && menuItemForm.get('price')?.touched) {
+        <mat-error>Price must be greater than 0</mat-error>
+      }
+    </mat-form-field>
+
+    <mat-form-field appearance="outline" class="full-width">
+      <mat-label>Image URL</mat-label>
+      <input matInput formControlName="imageUrl" placeholder="https://example.com/image.jpg">
+    </mat-form-field>
+
+    @if (menuItemForm.get('imageUrl')?.value) {
+      <div class="image-preview">
+        <img [src]="menuItemForm.get('imageUrl')?.value" alt="Preview" onerror="this.src='assets/placeholder-food.jpg'">
+      </div>
+    }
+
+    <mat-checkbox formControlName="isAvailable">Available</mat-checkbox>
+  </form>
+</mat-dialog-content>
+
+<mat-dialog-actions align="end">
+  <button mat-button (click)="onCancel()">Cancel</button>
+  <button mat-raised-button color="primary" (click)="onSubmit()" [disabled]="menuItemForm.invalid">
+    {{ isEditMode ? 'Update' : 'Create' }}
+  </button>
+</mat-dialog-actions>
+

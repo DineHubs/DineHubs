@@ -1,0 +1,39 @@
+.sidebar-nav {
+  padding: 16px 0;
+}
+
+mat-nav-list {
+  padding: 0;
+}
+
+a[mat-list-item] {
+  margin: 4px 8px;
+  border-radius: 4px;
+  
+  &.active {
+    background-color: rgba(25, 118, 210, 0.1);
+    color: #1976d2;
+  }
+  
+  &:hover {
+    background-color: rgba(0, 0, 0, 0.04);
+  }
+}
+
+.menu-expansion {
+  box-shadow: none;
+  margin: 4px 8px;
+  
+  ::ng-deep .mat-expansion-panel-body {
+    padding: 0;
+  }
+  
+  .menu-icon {
+    margin-right: 8px;
+  }
+}
+
+.submenu {
+  padding-left: 16px;
+}
+

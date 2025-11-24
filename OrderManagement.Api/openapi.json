@@ -1,0 +1,1660 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Order Management API",
+    "version": "1.0",
+    "description": "Multi-tenant restaurant order management platform for Malaysia",
+    "contact": {
+      "name": "Order Management Support",
+      "email": "support@ordermanagement.local"
+    }
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5073",
+      "description": "Local Development Server (HTTP)"
+    },
+    {
+      "url": "https://localhost:7118",
+      "description": "Local Development Server (HTTPS - requires SSL verification disabled)"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "Bearer": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Enter JWT Bearer token only"
+      }
+    },
+    "schemas": {
+      "LoginRequest": {
+        "type": "object",
+        "required": ["email", "password"],
+        "properties": {
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "admin@dinehub.com"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "example": "Admin@123"
+          }
+        }
+      },
+      "LoginResponse": {
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string",
+            "example": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+          },
+          "roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["Admin", "Manager"]
+          }
+        }
+      },
+      "MenuItemResponse": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "branchId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Dosa"
+          },
+          "category": {
+            "type": "string",
+            "example": "South Indian"
+          },
+          "price": {
+            "type": "number",
+            "format": "decimal",
+            "example": 12.50
+          },
+          "isAvailable": {
+            "type": "boolean",
+            "example": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://images.unsplash.com/photo-1612929633736-8c8b2f8b8b8b?w=800"
+          }
+        }
+      },
+      "CreateMenuItemRequest": {
+        "type": "object",
+        "required": ["branchId", "name", "category", "price"],
+        "properties": {
+          "branchId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440001"
+          },
+          "name": {
+            "type": "string",
+            "example": "Nasi Lemak"
+          },
+          "category": {
+            "type": "string",
+            "example": "Malaysian"
+          },
+          "price": {
+            "type": "number",
+            "format": "decimal",
+            "example": 8.50
+          },
+          "isAvailable": {
+            "type": "boolean",
+            "example": true,
+            "default": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://images.unsplash.com/photo-1612929633736-8c8b2f8b8b8b?w=800"
+          }
+        }
+      },
+      "UpdateMenuItemRequest": {
+        "type": "object",
+        "required": ["name", "category", "price", "isAvailable"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "Dosa Special"
+          },
+          "category": {
+            "type": "string",
+            "example": "South Indian"
+          },
+          "price": {
+            "type": "number",
+            "format": "decimal",
+            "example": 15.00
+          },
+          "isAvailable": {
+            "type": "boolean",
+            "example": true
+          },
+          "imageUrl": {
+            "type": "string",
+            "nullable": true,
+            "example": "https://images.unsplash.com/photo-1612929633736-8c8b2f8b8b8b?w=800"
+          }
+        }
+      },
+      "CreateOrderLineRequest": {
+        "type": "object",
+        "required": ["menuItemId", "name", "price", "quantity"],
+        "properties": {
+          "menuItemId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          },
+          "name": {
+            "type": "string",
+            "example": "Dosa"
+          },
+          "price": {
+            "type": "number",
+            "format": "decimal",
+            "example": 12.50
+          },
+          "quantity": {
+            "type": "integer",
+            "example": 2
+          }
+        }
+      },
+      "CreateOrderRequest": {
+        "type": "object",
+        "required": ["isTakeAway", "tableNumber", "items"],
+        "properties": {
+          "isTakeAway": {
+            "type": "boolean",
+            "example": false
+          },
+          "tableNumber": {
+            "type": "string",
+            "example": "T-05"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CreateOrderLineRequest"
+            }
+          }
+        }
+      },
+      "Order": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440010"
+          },
+          "tenantId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440002"
+          },
+          "branchId": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440001"
+          },
+          "orderNumber": {
+            "type": "string",
+            "example": "OM-20241215143022"
+          },
+          "status": {
+            "type": "string",
+            "enum": ["Draft", "Submitted", "InPreparation", "Ready", "Delivered", "Cancelled", "Paid"],
+            "example": "Submitted"
+          },
+          "subtotal": {
+            "type": "number",
+            "format": "decimal",
+            "example": 25.00
+          },
+          "tax": {
+            "type": "number",
+            "format": "decimal",
+            "example": 1.50
+          },
+          "serviceCharge": {
+            "type": "number",
+            "format": "decimal",
+            "example": 2.50
+          },
+          "total": {
+            "type": "number",
+            "format": "decimal",
+            "example": 29.00
+          },
+          "isTakeAway": {
+            "type": "boolean",
+            "example": false
+          },
+          "tableNumber": {
+            "type": "string",
+            "example": "T-05"
+          },
+          "lines": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "menuItemId": {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                "name": {
+                  "type": "string"
+                },
+                "price": {
+                  "type": "number",
+                  "format": "decimal"
+                },
+                "quantity": {
+                  "type": "integer"
+                },
+                "total": {
+                  "type": "number",
+                  "format": "decimal"
+                }
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "example": "2024-12-15T14:30:22Z"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "nullable": true
+          }
+        }
+      },
+      "NavigationMenuItem": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "example": "550e8400-e29b-41d4-a716-446655440020"
+          },
+          "label": {
+            "type": "string",
+            "example": "Dashboard"
+          },
+          "icon": {
+            "type": "string",
+            "nullable": true,
+            "example": "dashboard"
+          },
+          "route": {
+            "type": "string",
+            "nullable": true,
+            "example": "/dashboard"
+          },
+          "parentId": {
+            "type": "string",
+            "nullable": true,
+            "example": null
+          },
+          "allowedRoles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["Admin", "Manager", "Waiter"]
+          },
+          "children": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NavigationMenuItem"
+            },
+            "nullable": true
+          }
+        }
+      },
+      "MenuManagementItemDto": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440020"
+          },
+          "label": {
+            "type": "string",
+            "example": "Dashboard"
+          },
+          "icon": {
+            "type": "string",
+            "nullable": true,
+            "example": "dashboard"
+          },
+          "route": {
+            "type": "string",
+            "nullable": true,
+            "example": "/dashboard"
+          },
+          "parentId": {
+            "type": "string",
+            "format": "uuid",
+            "nullable": true,
+            "example": null
+          },
+          "displayOrder": {
+            "type": "integer",
+            "example": 1
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "allowedRoles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["Admin", "Manager"]
+          }
+        }
+      },
+      "UpdateMenuPermissionsRequest": {
+        "type": "object",
+        "required": ["allowedRoles"],
+        "properties": {
+          "allowedRoles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "example": ["Admin", "Manager", "Waiter"]
+          }
+        }
+      },
+      "ReorderMenuRequest": {
+        "type": "object",
+        "required": ["displayOrder"],
+        "properties": {
+          "displayOrder": {
+            "type": "integer",
+            "example": 2
+          }
+        }
+      },
+      "CreateTenantCommand": {
+        "type": "object",
+        "required": ["name", "code", "adminEmail", "planCode", "autoRenew"],
+        "properties": {
+          "name": {
+            "type": "string",
+            "example": "DineHub Restaurant"
+          },
+          "code": {
+            "type": "string",
+            "example": "dinehub"
+          },
+          "adminEmail": {
+            "type": "string",
+            "format": "email",
+            "example": "admin@dinehub.com"
+          },
+          "planCode": {
+            "type": "integer",
+            "enum": [1, 2, 3],
+            "example": 2,
+            "description": "1=FreeTrial, 2=Basic, 3=Premium"
+          },
+          "autoRenew": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "Tenant": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid",
+            "example": "550e8400-e29b-41d4-a716-446655440002"
+          },
+          "name": {
+            "type": "string",
+            "example": "DineHub Restaurant"
+          },
+          "code": {
+            "type": "string",
+            "example": "dinehub"
+          },
+          "countryCode": {
+            "type": "string",
+            "example": "MY"
+          },
+          "defaultCurrency": {
+            "type": "string",
+            "example": "MYR"
+          },
+          "isActive": {
+            "type": "boolean",
+            "example": true
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SubscriptionPlanDto": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "enum": [1, 2, 3],
+            "example": 2
+          },
+          "displayName": {
+            "type": "string",
+            "example": "Basic"
+          },
+          "monthlyPrice": {
+            "type": "number",
+            "format": "decimal",
+            "example": 99.00
+          },
+          "annualPrice": {
+            "type": "number",
+            "format": "decimal",
+            "example": 990.00
+          },
+          "maxBranches": {
+            "type": "integer",
+            "example": 5
+          },
+          "maxUsers": {
+            "type": "integer",
+            "example": 50
+          },
+          "includesInventory": {
+            "type": "boolean",
+            "example": true
+          },
+          "includesAdvancedReporting": {
+            "type": "boolean",
+            "example": false
+          },
+          "includesWhatsAppBilling": {
+            "type": "boolean",
+            "example": false
+          }
+        }
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "error": {
+            "type": "string",
+            "example": "Error message here"
+          }
+        }
+      }
+    }
+  },
+  "paths": {
+    "/api/v1/Auth/login": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "User login",
+        "description": "Authenticate user and receive JWT access token",
+        "operationId": "Login",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "email": "admin@dinehub.com",
+                "password": "Admin@123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Login successful",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                },
+                "example": {
+                  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDAiLCJlbWFpbCI6ImFkbWluQGRpbmVodWIuY29tIiwidGVuYW50SWQiOiI1NTBlODQwMC1lMjliLTQxZDQtYTcxNi00NDY2NTU0NDAwMDIiLCJicmFuY2hJZCI6bnVsbCwicm9sZXMiOlsiQWRtaW4iLCJNYW5hZ2VyIl0sImV4cCI6MTczNDI3ODIyMiwiaXNzIjoiT3JkZXJNYW5hZ2VtZW50IiwiYXVkIjoiT3JkZXJNYW5hZ2VtZW50In0.example",
+                  "roles": ["Admin", "Manager"]
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/Auth/seed-super-admin": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Seed super admin user",
+        "description": "Create a super admin user (development only)",
+        "operationId": "SeedSuperAdmin",
+        "security": [],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LoginRequest"
+              },
+              "example": {
+                "email": "superadmin@ordermanagement.local",
+                "password": "SuperAdmin@123"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Super admin created successfully"
+          },
+          "409": {
+            "description": "Super admin already exists"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/MenuItems": {
+      "get": {
+        "tags": ["Menu Items"],
+        "summary": "Get all menu items",
+        "description": "Retrieve all menu items for the current tenant/branch",
+        "operationId": "GetMenuItems",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "branchId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "required": false,
+            "description": "Filter by branch ID",
+            "example": "550e8400-e29b-41d4-a716-446655440001"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of menu items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MenuItemResponse"
+                  }
+                },
+                "example": [
+                  {
+                    "id": "550e8400-e29b-41d4-a716-446655440000",
+                    "branchId": "550e8400-e29b-41d4-a716-446655440001",
+                    "name": "Dosa",
+                    "category": "South Indian",
+                    "price": 12.50,
+                    "isAvailable": true,
+                    "imageUrl": "https://images.unsplash.com/photo-1612929633736-8c8b2f8b8b8b?w=800"
+                  },
+                  {
+                    "id": "550e8400-e29b-41d4-a716-446655440003",
+                    "branchId": "550e8400-e29b-41d4-a716-446655440001",
+                    "name": "Nasi Lemak",
+                    "category": "Malaysian",
+                    "price": 8.50,
+                    "isAvailable": true,
+                    "imageUrl": "https://images.unsplash.com/photo-1612929633736-8c8b2f8b8b8b?w=800"
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      },
+      "post": {
+        "tags": ["Menu Items"],
+        "summary": "Create a new menu item",
+        "description": "Create a new menu item for the current tenant/branch",
+        "operationId": "CreateMenuItem",
+        "security": [{"Bearer": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateMenuItemRequest"
+              },
+              "example": {
+                "branchId": "550e8400-e29b-41d4-a716-446655440001",
+                "name": "Roti Canai",
+                "category": "Malaysian",
+                "price": 5.50,
+                "isAvailable": true,
+                "imageUrl": "https://images.unsplash.com/photo-1612929633736-8c8b2f8b8b8b?w=800"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Menu item created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MenuItemResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "500": {
+            "description": "Internal server error"
+          }
+        }
+      }
+    },
+    "/api/v1/MenuItems/{id}": {
+      "get": {
+        "tags": ["Menu Items"],
+        "summary": "Get menu item by ID",
+        "description": "Retrieve a specific menu item by its ID",
+        "operationId": "GetMenuItem",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Menu item found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MenuItemResponse"
+                },
+                "example": {
+                  "id": "550e8400-e29b-41d4-a716-446655440000",
+                  "branchId": "550e8400-e29b-41d4-a716-446655440001",
+                  "name": "Dosa",
+                  "category": "South Indian",
+                  "price": 12.50,
+                  "isAvailable": true,
+                  "imageUrl": "https://images.unsplash.com/photo-1612929633736-8c8b2f8b8b8b?w=800"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Menu item not found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "put": {
+        "tags": ["Menu Items"],
+        "summary": "Update menu item",
+        "description": "Update an existing menu item",
+        "operationId": "UpdateMenuItem",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMenuItemRequest"
+              },
+              "example": {
+                "name": "Dosa Special",
+                "category": "South Indian",
+                "price": 15.00,
+                "isAvailable": true,
+                "imageUrl": "https://images.unsplash.com/photo-1612929633736-8c8b2f8b8b8b?w=800"
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Menu item updated successfully"
+          },
+          "404": {
+            "description": "Menu item not found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      },
+      "delete": {
+        "tags": ["Menu Items"],
+        "summary": "Delete menu item",
+        "description": "Delete a menu item",
+        "operationId": "DeleteMenuItem",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440000"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Menu item deleted successfully"
+          },
+          "404": {
+            "description": "Menu item not found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/Orders": {
+      "post": {
+        "tags": ["Orders"],
+        "summary": "Create a new order",
+        "description": "Create a new order with menu items",
+        "operationId": "CreateOrder",
+        "security": [{"Bearer": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateOrderRequest"
+              },
+              "example": {
+                "isTakeAway": false,
+                "tableNumber": "T-05",
+                "items": [
+                  {
+                    "menuItemId": "550e8400-e29b-41d4-a716-446655440000",
+                    "name": "Dosa",
+                    "price": 12.50,
+                    "quantity": 2
+                  },
+                  {
+                    "menuItemId": "550e8400-e29b-41d4-a716-446655440003",
+                    "name": "Nasi Lemak",
+                    "price": 8.50,
+                    "quantity": 1
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Order created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                },
+                "example": {
+                  "id": "550e8400-e29b-41d4-a716-446655440010",
+                  "tenantId": "550e8400-e29b-41d4-a716-446655440002",
+                  "branchId": "550e8400-e29b-41d4-a716-446655440001",
+                  "orderNumber": "OM-20241215143022",
+                  "status": "Submitted",
+                  "subtotal": 33.50,
+                  "tax": 2.01,
+                  "serviceCharge": 3.35,
+                  "total": 38.86,
+                  "isTakeAway": false,
+                  "tableNumber": "T-05",
+                  "lines": [
+                    {
+                      "menuItemId": "550e8400-e29b-41d4-a716-446655440000",
+                      "name": "Dosa",
+                      "price": 12.50,
+                      "quantity": 2,
+                      "total": 25.00
+                    },
+                    {
+                      "menuItemId": "550e8400-e29b-41d4-a716-446655440003",
+                      "name": "Nasi Lemak",
+                      "price": 8.50,
+                      "quantity": 1,
+                      "total": 8.50
+                    }
+                  ],
+                  "createdAt": "2024-12-15T14:30:22Z"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Branch context required"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/Orders/{id}": {
+      "get": {
+        "tags": ["Orders"],
+        "summary": "Get order by ID",
+        "description": "Retrieve a specific order by its ID",
+        "operationId": "GetOrder",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440010"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Order found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Order"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Order not found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/Orders/{id}/status": {
+      "patch": {
+        "tags": ["Orders"],
+        "summary": "Update order status",
+        "description": "Update the status of an order",
+        "operationId": "UpdateOrderStatus",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440010"
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": ["Draft", "Submitted", "InPreparation", "Ready", "Delivered", "Cancelled", "Paid"]
+            },
+            "example": "InPreparation"
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Order status updated successfully"
+          },
+          "404": {
+            "description": "Order not found"
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/Orders/qr": {
+      "post": {
+        "tags": ["Orders"],
+        "summary": "Generate QR ordering session",
+        "description": "Generate a QR code session for customer self-ordering",
+        "operationId": "GenerateQrSession",
+        "security": [{"Bearer": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "string"
+              },
+              "example": "T-05"
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "QR session generated",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "code": {
+                      "type": "string",
+                      "example": "QR-20241215143022-T-05"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad request - Branch context required"
+          }
+        }
+      }
+    },
+    "/api/v1/Kitchen/queue": {
+      "get": {
+        "tags": ["Kitchen"],
+        "summary": "Get kitchen queue",
+        "description": "Retrieve all orders in kitchen queue (Submitted, InPreparation, Ready)",
+        "operationId": "GetKitchenQueue",
+        "security": [{"Bearer": []}],
+        "responses": {
+          "200": {
+            "description": "Kitchen queue",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Order"
+                  }
+                },
+                "example": [
+                  {
+                    "id": "550e8400-e29b-41d4-a716-446655440010",
+                    "orderNumber": "OM-20241215143022",
+                    "status": "Submitted",
+                    "tableNumber": "T-05",
+                    "total": 38.86,
+                    "lines": [
+                      {
+                        "menuItemId": "550e8400-e29b-41d4-a716-446655440000",
+                        "name": "Dosa",
+                        "quantity": 2
+                      }
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/Navigation/menu": {
+      "get": {
+        "tags": ["Navigation"],
+        "summary": "Get navigation menu",
+        "description": "Get role-based navigation menu for the current user",
+        "operationId": "GetNavigationMenu",
+        "security": [{"Bearer": []}],
+        "responses": {
+          "200": {
+            "description": "Navigation menu",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NavigationMenuItem"
+                  }
+                },
+                "example": [
+                  {
+                    "id": "550e8400-e29b-41d4-a716-446655440020",
+                    "label": "Dashboard",
+                    "icon": "dashboard",
+                    "route": "/dashboard",
+                    "parentId": null,
+                    "allowedRoles": ["Admin", "Manager", "Waiter"],
+                    "children": []
+                  },
+                  {
+                    "id": "550e8400-e29b-41d4-a716-446655440021",
+                    "label": "Orders",
+                    "icon": "shopping_cart",
+                    "route": "/orders",
+                    "parentId": null,
+                    "allowedRoles": ["Admin", "Manager", "Waiter"],
+                    "children": []
+                  }
+                ]
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/menu-management/items": {
+      "get": {
+        "tags": ["Menu Management"],
+        "summary": "Get all navigation menu items",
+        "description": "Get all navigation menu items (SuperAdmin only)",
+        "operationId": "GetAllMenuManagementItems",
+        "security": [{"Bearer": []}],
+        "responses": {
+          "200": {
+            "description": "List of menu management items",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MenuManagementItemDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - SuperAdmin only"
+          }
+        }
+      }
+    },
+    "/api/v1/menu-management/items/{id}": {
+      "get": {
+        "tags": ["Menu Management"],
+        "summary": "Get menu management item by ID",
+        "description": "Get a specific navigation menu item",
+        "operationId": "GetMenuManagementItem",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Menu management item found"
+          },
+          "404": {
+            "description": "Not found"
+          }
+        }
+      }
+    },
+    "/api/v1/menu-management/items/{id}/permissions": {
+      "put": {
+        "tags": ["Menu Management"],
+        "summary": "Update menu item permissions",
+        "description": "Update role-based permissions for a navigation menu item",
+        "operationId": "UpdateMenuPermissions",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMenuPermissionsRequest"
+              },
+              "example": {
+                "allowedRoles": ["Admin", "Manager"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Permissions updated successfully"
+          },
+          "404": {
+            "description": "Menu item not found"
+          }
+        }
+      },
+      "get": {
+        "tags": ["Menu Management"],
+        "summary": "Get menu item permissions",
+        "description": "Get role-based permissions for a navigation menu item",
+        "operationId": "GetMenuPermissions",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Permissions",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
+                "example": ["Admin", "Manager", "Waiter"]
+              }
+            }
+          },
+          "404": {
+            "description": "Menu item not found"
+          }
+        }
+      }
+    },
+    "/api/v1/menu-management/items/{id}/order": {
+      "put": {
+        "tags": ["Menu Management"],
+        "summary": "Update display order",
+        "description": "Update the display order of a navigation menu item",
+        "operationId": "UpdateDisplayOrder",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReorderMenuRequest"
+              },
+              "example": {
+                "displayOrder": 2
+              }
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Display order updated successfully"
+          },
+          "404": {
+            "description": "Menu item not found"
+          }
+        }
+      }
+    },
+    "/api/v1/menu-management/items/{id}/toggle": {
+      "put": {
+        "tags": ["Menu Management"],
+        "summary": "Toggle menu item active status",
+        "description": "Enable or disable a navigation menu item",
+        "operationId": "ToggleMenuItem",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "boolean"
+              },
+              "example": true
+            }
+          }
+        },
+        "responses": {
+          "204": {
+            "description": "Menu item toggled successfully"
+          },
+          "404": {
+            "description": "Menu item not found"
+          }
+        }
+      }
+    },
+    "/api/v1/Tenants": {
+      "post": {
+        "tags": ["Tenants"],
+        "summary": "Create a new tenant",
+        "description": "Create a new tenant with subscription plan (SuperAdmin only)",
+        "operationId": "CreateTenant",
+        "security": [{"Bearer": []}],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTenantCommand"
+              },
+              "example": {
+                "name": "DineHub Restaurant",
+                "code": "dinehub",
+                "adminEmail": "admin@dinehub.com",
+                "planCode": 2,
+                "autoRenew": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Tenant created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tenant"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - SuperAdmin only"
+          }
+        }
+      }
+    },
+    "/api/v1/Tenants/plans": {
+      "get": {
+        "tags": ["Tenants"],
+        "summary": "Get available subscription plans",
+        "description": "Get all available subscription plans",
+        "operationId": "GetTenantPlans",
+        "security": [],
+        "responses": {
+          "200": {
+            "description": "List of subscription plans",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SubscriptionPlanDto"
+                  }
+                },
+                "example": [
+                  {
+                    "code": 1,
+                    "displayName": "Free Trial",
+                    "monthlyPrice": 0.00,
+                    "annualPrice": 0.00,
+                    "maxBranches": 1,
+                    "maxUsers": 5,
+                    "includesInventory": false,
+                    "includesAdvancedReporting": false,
+                    "includesWhatsAppBilling": false
+                  },
+                  {
+                    "code": 2,
+                    "displayName": "Basic",
+                    "monthlyPrice": 99.00,
+                    "annualPrice": 990.00,
+                    "maxBranches": 5,
+                    "maxUsers": 50,
+                    "includesInventory": true,
+                    "includesAdvancedReporting": false,
+                    "includesWhatsAppBilling": false
+                  },
+                  {
+                    "code": 3,
+                    "displayName": "Premium",
+                    "monthlyPrice": 299.00,
+                    "annualPrice": 2990.00,
+                    "maxBranches": 0,
+                    "maxUsers": 0,
+                    "includesInventory": true,
+                    "includesAdvancedReporting": true,
+                    "includesWhatsAppBilling": true
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/Subscriptions/{tenantId}/upgrade": {
+      "post": {
+        "tags": ["Subscriptions"],
+        "summary": "Request plan change",
+        "description": "Request a subscription plan upgrade/downgrade",
+        "operationId": "RequestPlanChange",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "tenantId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            },
+            "example": "550e8400-e29b-41d4-a716-446655440002"
+          },
+          {
+            "name": "plan",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "enum": [1, 2, 3]
+            },
+            "example": 3,
+            "description": "1=FreeTrial, 2=Basic, 3=Premium"
+          }
+        ],
+        "responses": {
+          "202": {
+            "description": "Plan change request accepted"
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          }
+        }
+      }
+    },
+    "/api/v1/Reports/sales": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Get sales report",
+        "description": "Get sales summary for a date range",
+        "operationId": "GetSalesReport",
+        "security": [{"Bearer": []}],
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "example": "2024-12-01T00:00:00Z"
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "example": "2024-12-15T23:59:59Z"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Sales report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "example": {
+                  "totalSales": 12500.50,
+                  "totalOrders": 150,
+                  "averageOrderValue": 83.34,
+                  "period": {
+                    "from": "2024-12-01T00:00:00Z",
+                    "to": "2024-12-15T23:59:59Z"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/Reports/inventory": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Get inventory report",
+        "description": "Get inventory forecast report",
+        "operationId": "GetInventoryReport",
+        "security": [{"Bearer": []}],
+        "responses": {
+          "200": {
+            "description": "Inventory report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "example": {
+                  "lowStockItems": 5,
+                  "outOfStockItems": 2,
+                  "totalItems": 50
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        }
+      }
+    },
+    "/api/v1/Reports/subscription": {
+      "get": {
+        "tags": ["Reports"],
+        "summary": "Get subscription usage report",
+        "description": "Get subscription usage statistics (SuperAdmin/Admin only)",
+        "operationId": "GetSubscriptionUsage",
+        "security": [{"Bearer": []}],
+        "responses": {
+          "200": {
+            "description": "Subscription usage report",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                },
+                "example": {
+                  "currentPlan": "Basic",
+                  "branchesUsed": 3,
+                  "branchesLimit": 5,
+                  "usersUsed": 25,
+                  "usersLimit": 50,
+                  "ordersThisMonth": 1250
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden - SuperAdmin/Admin only"
+          }
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "User authentication endpoints"
+    },
+    {
+      "name": "Menu Items",
+      "description": "Menu item management endpoints"
+    },
+    {
+      "name": "Orders",
+      "description": "Order management endpoints"
+    },
+    {
+      "name": "Kitchen",
+      "description": "Kitchen display and queue management"
+    },
+    {
+      "name": "Navigation",
+      "description": "Navigation menu endpoints"
+    },
+    {
+      "name": "Menu Management",
+      "description": "Navigation menu management (SuperAdmin only)"
+    },
+    {
+      "name": "Tenants",
+      "description": "Tenant management endpoints"
+    },
+    {
+      "name": "Subscriptions",
+      "description": "Subscription management endpoints"
+    },
+    {
+      "name": "Reports",
+      "description": "Reporting endpoints"
+    }
+  ]
+}
+

@@ -1,0 +1,18 @@
+<div class="customer-menu-container">
+  <h1>Menu</h1>
+  <div class="menu-grid">
+    @for (item of menuItems; track item.id) {
+      <mat-card>
+        <img [src]="item.imageUrl || 'assets/placeholder-food.jpg'" [alt]="item.name">
+        <mat-card-content>
+          <h3>{{ item.name }}</h3>
+          <p>RM {{ item.price.toFixed(2) }}</p>
+        </mat-card-content>
+        <mat-card-actions>
+          <button mat-raised-button color="primary" (click)="addToCart(item)">Add to Cart</button>
+        </mat-card-actions>
+      </mat-card>
+    }
+  </div>
+</div>
+

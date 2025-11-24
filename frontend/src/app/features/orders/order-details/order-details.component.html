@@ -1,0 +1,14 @@
+<div class="order-details-container">
+  <button mat-icon-button routerLink="/orders">
+    <mat-icon>arrow_back</mat-icon>
+  </button>
+  
+  @if (order) {
+    <mat-card>
+      <h2>Order {{ order.orderNumber }}</h2>
+      <p>Status: {{ order.status }}</p>
+      <p>Total: RM {{ order.totalAmount.toFixed(2) }}</p>
+    </mat-card>
+  }
+</div>
+

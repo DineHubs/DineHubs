@@ -1,0 +1,143 @@
+<div class="order-create-container">
+  <h1>Create New Order</h1>
+
+  <div class="order-layout">
+    <!-- Menu Items Section -->
+    <div class="menu-section">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>Menu Items</mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <!-- Search and Filter -->
+          <div class="filter-section">
+            <mat-form-field appearance="outline" class="search-field">
+              <mat-label>Search menu items</mat-label>
+              <input matInput [(ngModel)]="searchTerm" (input)="onSearchChange()" placeholder="Search by name or category">
+              <mat-icon matPrefix>search</mat-icon>
+            </mat-form-field>
+
+            <div class="category-chips">
+              <button
+                *ngFor="let category of categories"
+                mat-stroked-button
+                [class.active]="selectedCategory === category"
+                (click)="filterByCategory(category)"
+                class="category-button">
+                {{ category }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Loading Spinner -->
+          <div *ngIf="isLoading" class="loading-container">
+            <mat-spinner diameter="50"></mat-spinner>
+          </div>
+
+          <!-- Menu Items Grid -->
+          <div *ngIf="!isLoading" class="menu-grid">
+            <mat-card *ngFor="let item of filteredItems" class="menu-item-card" (click)="addToCart(item)">
+              <div class="menu-item-image" [style.background-image]="'url(' + (item.imageUrl || '/assets/default-food.jpg') + ')'"></div>
+              <mat-card-content>
+                <h3>{{ item.name }}</h3>
+                <p class="category">{{ item.category }}</p>
+                <p class="price">${{ item.price | number:'1.2-2' }}</p>
+              </mat-card-content>
+              <mat-card-actions>
+                <button mat-button color="primary">
+                  <mat-icon>add_shopping_cart</mat-icon>
+                  Add to Cart
+                </button>
+              </mat-card-actions>
+            </mat-card>
+          </div>
+
+          <div *ngIf="!isLoading && filteredItems.length === 0" class="no-items">
+            <p>No menu items found</p>
+          </div>
+        </mat-card-content>
+      </mat-card>
+    </div>
+
+    <!-- Cart and Order Details Section -->
+    <div class="cart-section">
+      <mat-card>
+        <mat-card-header>
+          <mat-card-title>
+            <mat-icon>shopping_cart</mat-icon>
+            Cart
+            <mat-chip *ngIf="getCartItemCount() > 0" color="primary">{{ getCartItemCount() }}</mat-chip>
+          </mat-card-title>
+        </mat-card-header>
+        <mat-card-content>
+          <!-- Order Details Form -->
+          <div class="order-details">
+            <mat-form-field appearance="outline" class="full-width">
+              <mat-label>Table Number</mat-label>
+              <input matInput [(ngModel)]="tableNumber" [disabled]="isTakeAway" placeholder="Enter table number">
+              <mat-icon matPrefix>table_restaurant</mat-icon>
+            </mat-form-field>
+
+            <mat-checkbox [(ngModel)]="isTakeAway" class="full-width">
+              Take Away
+            </mat-checkbox>
+          </div>
+
+          <mat-divider></mat-divider>
+
+          <!-- Cart Items -->
+          <div class="cart-items">
+            <div *ngIf="cart.length === 0" class="empty-cart">
+              <mat-icon>shopping_cart</mat-icon>
+              <p>Your cart is empty</p>
+              <p class="hint">Click on menu items to add them to your cart</p>
+            </div>
+
+            <div *ngFor="let cartItem of cart" class="cart-item">
+              <div class="item-info">
+                <h4>{{ cartItem.menuItem.name }}</h4>
+                <p class="item-price">${{ cartItem.menuItem.price | number:'1.2-2' }} each</p>
+              </div>
+              <div class="quantity-controls">
+                <button mat-icon-button (click)="updateQuantity(cartItem, -1)" color="primary">
+                  <mat-icon>remove</mat-icon>
+                </button>
+                <span class="quantity">{{ cartItem.quantity }}</span>
+                <button mat-icon-button (click)="updateQuantity(cartItem, 1)" color="primary">
+                  <mat-icon>add</mat-icon>
+                </button>
+                <button mat-icon-button (click)="removeFromCart(cartItem)" color="warn">
+                  <mat-icon>delete</mat-icon>
+                </button>
+              </div>
+              <div class="item-total">
+                ${{ (cartItem.menuItem.price * cartItem.quantity) | number:'1.2-2' }}
+              </div>
+            </div>
+          </div>
+
+          <!-- Cart Total -->
+          <div *ngIf="cart.length > 0" class="cart-total">
+            <mat-divider></mat-divider>
+            <div class="total-row">
+              <span class="total-label">Total:</span>
+              <span class="total-amount">${{ getCartTotal() | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </mat-card-content>
+        <mat-card-actions class="cart-actions">
+          <button mat-button (click)="clearCart()" [disabled]="cart.length === 0 || isSubmitting">
+            <mat-icon>clear</mat-icon>
+            Clear Cart
+          </button>
+          <button mat-raised-button color="primary" (click)="submitOrder()" [disabled]="cart.length === 0 || isSubmitting">
+            <mat-icon *ngIf="!isSubmitting">check</mat-icon>
+            <mat-spinner *ngIf="isSubmitting" diameter="20" class="button-spinner"></mat-spinner>
+            {{ isSubmitting ? 'Creating Order...' : 'Create Order' }}
+          </button>
+        </mat-card-actions>
+      </mat-card>
+    </div>
+  </div>
+</div>
+

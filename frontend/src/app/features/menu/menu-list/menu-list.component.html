@@ -1,0 +1,110 @@
+<div class="menu-list-container">
+  <div class="menu-header">
+    <h1>Menu Management</h1>
+    <button mat-raised-button color="primary" (click)="openAddDialog()">
+      <mat-icon>add</mat-icon>
+      <span>Add Menu Item</span>
+    </button>
+  </div>
+
+  <div class="menu-filters">
+    <mat-form-field appearance="outline" class="search-field">
+      <mat-label>Search</mat-label>
+      <input matInput [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange()" placeholder="Search menu items...">
+      <mat-icon matPrefix>search</mat-icon>
+    </mat-form-field>
+
+    <div class="view-toggle">
+      <button mat-icon-button [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">
+        <mat-icon>grid_view</mat-icon>
+      </button>
+      <button mat-icon-button [class.active]="viewMode === 'list'" (click)="viewMode = 'list'">
+        <mat-icon>list</mat-icon>
+      </button>
+    </div>
+  </div>
+
+  <mat-tab-group [(selectedIndex)]="selectedCategory" (selectedIndexChange)="filterByCategory(categories[$event])">
+    @for (category of categories; track category) {
+      <mat-tab [label]="category"></mat-tab>
+    }
+  </mat-tab-group>
+
+  @if (isLoading) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+    </div>
+  } @else {
+    @if (viewMode === 'grid') {
+      <div class="menu-grid">
+        @for (item of filteredItems; track item.id) {
+          <mat-card class="menu-card">
+            <div class="menu-image" [style.background-image]="'url(' + (item.imageUrl || 'assets/placeholder-food.jpg') + ')'">
+              @if (!item.isAvailable) {
+                <div class="unavailable-overlay">
+                  <span>Unavailable</span>
+                </div>
+              }
+            </div>
+            <mat-card-content>
+              <div class="menu-header-info">
+                <h3>{{ item.name }}</h3>
+                <mat-chip [class.available]="item.isAvailable" [class.unavailable]="!item.isAvailable">
+                  {{ item.isAvailable ? 'Available' : 'Unavailable' }}
+                </mat-chip>
+              </div>
+              <p class="category">{{ item.category }}</p>
+              <p class="price">RM {{ item.price.toFixed(2) }}</p>
+            </mat-card-content>
+            <mat-card-actions>
+              <button mat-button (click)="toggleAvailability(item)">
+                <mat-icon>{{ item.isAvailable ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+                <span>{{ item.isAvailable ? 'Disable' : 'Enable' }}</span>
+              </button>
+              <button mat-button (click)="openEditDialog(item)">
+                <mat-icon>edit</mat-icon>
+                <span>Edit</span>
+              </button>
+              <button mat-button color="warn" (click)="deleteItem(item)">
+                <mat-icon>delete</mat-icon>
+                <span>Delete</span>
+              </button>
+            </mat-card-actions>
+          </mat-card>
+        }
+      </div>
+    } @else {
+      <div class="menu-list-view">
+        @for (item of filteredItems; track item.id) {
+          <mat-card class="menu-item-row">
+            <div class="item-image" [style.background-image]="'url(' + (item.imageUrl || 'assets/placeholder-food.jpg') + ')'"></div>
+            <div class="item-info">
+              <h3>{{ item.name }}</h3>
+              <p class="category">{{ item.category }}</p>
+              <p class="price">RM {{ item.price.toFixed(2) }}</p>
+            </div>
+            <div class="item-actions">
+              <button mat-icon-button (click)="toggleAvailability(item)" [color]="item.isAvailable ? 'primary' : ''">
+                <mat-icon>{{ item.isAvailable ? 'toggle_on' : 'toggle_off' }}</mat-icon>
+              </button>
+              <button mat-icon-button (click)="openEditDialog(item)">
+                <mat-icon>edit</mat-icon>
+              </button>
+              <button mat-icon-button color="warn" (click)="deleteItem(item)">
+                <mat-icon>delete</mat-icon>
+              </button>
+            </div>
+          </mat-card>
+        }
+      </div>
+    }
+
+    @if (filteredItems.length === 0) {
+      <div class="empty-state">
+        <mat-icon>restaurant_menu</mat-icon>
+        <p>No menu items found</p>
+      </div>
+    }
+  }
+</div>
+

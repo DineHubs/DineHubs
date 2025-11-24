@@ -1,0 +1,105 @@
+.dashboard-container {
+  padding: 24px;
+}
+
+h1 {
+  margin-bottom: 24px;
+  font-size: 32px;
+  font-weight: 500;
+}
+
+.stats-grid {
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  transition: transform 0.2s, box-shadow 0.2s;
+  
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+}
+
+.stat-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  height: 100%;
+}
+
+.stat-icon {
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  
+  mat-icon {
+    font-size: 32px;
+    width: 32px;
+    height: 32px;
+  }
+}
+
+.stat-info {
+  flex: 1;
+}
+
+.stat-value {
+  font-size: 28px;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+.stat-title {
+  font-size: 14px;
+  color: #666;
+}
+
+.quick-actions {
+  margin-top: 32px;
+}
+
+.quick-actions h2 {
+  margin-bottom: 16px;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+}
+
+.actions-grid button {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 16px;
+}
+
+@media (max-width: 960px) {
+  .stats-grid {
+    ::ng-deep mat-grid-list {
+      mat-grid-tile {
+        &:nth-child(n+3) {
+          display: none;
+        }
+      }
+    }
+  }
+  
+  .actions-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

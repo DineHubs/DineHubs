@@ -1,0 +1,46 @@
+<div class="dashboard-container">
+  <h1>Dashboard</h1>
+  
+  <mat-grid-list cols="4" rowHeight="150px" gutterSize="16px" class="stats-grid">
+    @for (stat of stats; track stat.title) {
+      <mat-grid-tile>
+        <mat-card class="stat-card" [routerLink]="stat.route">
+          <mat-card-content>
+            <div class="stat-content">
+              <div class="stat-icon" [style.background-color]="stat.color + '20'">
+                <mat-icon [style.color]="stat.color">{{ stat.icon }}</mat-icon>
+              </div>
+              <div class="stat-info">
+                <div class="stat-value">{{ stat.value }}</div>
+                <div class="stat-title">{{ stat.title }}</div>
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </mat-grid-tile>
+    }
+  </mat-grid-list>
+
+  <div class="quick-actions">
+    <h2>Quick Actions</h2>
+    <div class="actions-grid">
+      <button mat-raised-button color="primary" routerLink="/orders/create">
+        <mat-icon>add_shopping_cart</mat-icon>
+        <span>New Order</span>
+      </button>
+      <button mat-raised-button routerLink="/menu">
+        <mat-icon>restaurant_menu</mat-icon>
+        <span>Manage Menu</span>
+      </button>
+      <button mat-raised-button routerLink="/kitchen">
+        <mat-icon>kitchen</mat-icon>
+        <span>Kitchen Display</span>
+      </button>
+      <button mat-raised-button routerLink="/tables">
+        <mat-icon>table_restaurant</mat-icon>
+        <span>Table Management</span>
+      </button>
+    </div>
+  </div>
+</div>
+
