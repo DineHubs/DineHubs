@@ -1,10 +1,11 @@
 export enum OrderStatus {
-  Submitted = 'Submitted',
-  InPreparation = 'InPreparation',
-  Ready = 'Ready',
-  Served = 'Served',
-  Completed = 'Completed',
-  Cancelled = 'Cancelled'
+  Draft = 1,
+  Submitted = 2,
+  InPreparation = 3,
+  Ready = 4,
+  Delivered = 5,
+  Cancelled = 6,
+  Paid = 7
 }
 
 export interface OrderLine {
@@ -25,10 +26,13 @@ export interface Order {
   tenantId: string;
   branchId: string;
   orderNumber: string;
-  status: OrderStatus;
+  status: number | OrderStatus; // API returns integer, but we can use enum for type safety
   isTakeAway: boolean;
   tableNumber?: string;
-  totalAmount: number;
+  subtotal: number;
+  tax: number;
+  serviceCharge: number;
+  total: number;
   lines: OrderLine[];
   createdAt: string;
   updatedAt?: string;

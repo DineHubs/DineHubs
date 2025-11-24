@@ -6,8 +6,8 @@
   @if (order) {
     <mat-card>
       <h2>Order {{ order.orderNumber }}</h2>
-      <p>Status: {{ order.status }}</p>
-      <p>Total: RM {{ order.totalAmount.toFixed(2) }}</p>
+      <p>Status: {{ getStatusText(order.status) }}</p>
+      <p>Total: RM {{ order.total.toFixed(2) }}</p>
     </mat-card>
   }
 </div>

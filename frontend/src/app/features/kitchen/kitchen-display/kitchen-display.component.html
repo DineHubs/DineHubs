@@ -36,9 +36,9 @@
                 </ul>
               </div>
               <div class="order-total">
-                <strong>Total: ${{ order.totalAmount.toFixed(2) }}</strong>
+                <strong>Total: ${{ order.total.toFixed(2) }}</strong>
               </div>
-              <mat-chip [color]="getStatusColor(order.status)">{{ order.status }}</mat-chip>
+              <mat-chip [color]="getStatusColor(order.status)">{{ getStatusText(order.status) }}</mat-chip>
             </mat-card-content>
             <mat-card-actions>
               @if (order.status === OrderStatus.Submitted) {

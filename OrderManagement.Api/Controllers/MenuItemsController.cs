@@ -14,13 +14,13 @@ namespace OrderManagement.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
-[Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.Admin},{SystemRoles.Manager}")]
 public class MenuItemsController(
     OrderManagementDbContext dbContext,
     ITenantContext tenantContext,
     Serilog.ILogger logger) : ControllerBase
 {
     [HttpGet]
+    [Authorize(Roles = $"{SystemRoles.Admin},{SystemRoles.Manager},{SystemRoles.Waiter}")]
     public async Task<ActionResult<IEnumerable<MenuItemResponse>>> GetMenuItems([FromQuery] Guid? branchId, CancellationToken cancellationToken)
     {
         try
@@ -55,6 +55,7 @@ public class MenuItemsController(
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Roles = $"{SystemRoles.Admin},{SystemRoles.Manager},{SystemRoles.Waiter}")]
     public async Task<ActionResult<MenuItemResponse>> GetMenuItem(Guid id, CancellationToken cancellationToken)
     {
         try
@@ -79,6 +80,7 @@ public class MenuItemsController(
     }
 
     [HttpPost]
+    [Authorize(Roles = $"{SystemRoles.Admin},{SystemRoles.Manager}")]
     public async Task<ActionResult<MenuItemResponse>> CreateMenuItem([FromBody] CreateMenuItemRequest request, CancellationToken cancellationToken)
     {
         try
@@ -115,6 +117,7 @@ public class MenuItemsController(
     }
 
     [HttpPut("{id:guid}")]
+    [Authorize(Roles = $"{SystemRoles.Admin},{SystemRoles.Manager}")]
     public async Task<IActionResult> UpdateMenuItem(Guid id, [FromBody] UpdateMenuItemRequest request, CancellationToken cancellationToken)
     {
         try
@@ -143,6 +146,7 @@ public class MenuItemsController(
     }
 
     [HttpDelete("{id:guid}")]
+    [Authorize(Roles = $"{SystemRoles.Admin},{SystemRoles.Manager}")]
     public async Task<IActionResult> DeleteMenuItem(Guid id, CancellationToken cancellationToken)
     {
         try

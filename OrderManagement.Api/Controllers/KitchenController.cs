@@ -12,7 +12,7 @@ namespace OrderManagement.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
-[Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.Kitchen},{SystemRoles.Manager}")]
+[Authorize(Roles = $"{SystemRoles.Kitchen},{SystemRoles.Manager}")]
 public class KitchenController(OrderManagementDbContext dbContext, ITenantContext tenantContext) : ControllerBase
 {
     [HttpGet("queue")]

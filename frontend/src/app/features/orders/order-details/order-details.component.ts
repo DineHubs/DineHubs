@@ -7,7 +7,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Order } from '../../../core/models/order.model';
+import { Order, OrderStatus } from '../../../core/models/order.model';
 
 @Component({
   selector: 'app-order-details',
@@ -60,6 +60,19 @@ export class OrderDetailsComponent implements OnInit {
         console.error('Error loading order:', error);
       }
     });
+  }
+
+  getStatusText(status: number | OrderStatus): string {
+    const statusMap: Record<number, string> = {
+      [OrderStatus.Draft]: 'Draft',
+      [OrderStatus.Submitted]: 'Submitted',
+      [OrderStatus.InPreparation]: 'In Preparation',
+      [OrderStatus.Ready]: 'Ready',
+      [OrderStatus.Delivered]: 'Delivered',
+      [OrderStatus.Cancelled]: 'Cancelled',
+      [OrderStatus.Paid]: 'Paid'
+    };
+    return statusMap[status] || 'Unknown';
   }
 }
 

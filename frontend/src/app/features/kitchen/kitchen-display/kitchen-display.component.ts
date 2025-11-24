@@ -94,16 +94,31 @@ export class KitchenDisplayComponent implements OnInit, OnDestroy {
     });
   }
 
-  getStatusColor(status: OrderStatus): string {
-    const colors: Record<OrderStatus, string> = {
+  getStatusText(status: number | OrderStatus): string {
+    const statusMap: Record<number, string> = {
+      [OrderStatus.Draft]: 'Draft',
+      [OrderStatus.Submitted]: 'Submitted',
+      [OrderStatus.InPreparation]: 'In Preparation',
+      [OrderStatus.Ready]: 'Ready',
+      [OrderStatus.Delivered]: 'Delivered',
+      [OrderStatus.Cancelled]: 'Cancelled',
+      [OrderStatus.Paid]: 'Paid'
+    };
+    return statusMap[status] || 'Unknown';
+  }
+
+  getStatusColor(status: number | OrderStatus): string {
+    const statusNum = typeof status === 'number' ? status : status;
+    const colors: Record<number, string> = {
+      [OrderStatus.Draft]: '',
       [OrderStatus.Submitted]: 'primary',
       [OrderStatus.InPreparation]: 'accent',
       [OrderStatus.Ready]: 'warn',
-      [OrderStatus.Served]: '',
-      [OrderStatus.Completed]: '',
-      [OrderStatus.Cancelled]: 'warn'
+      [OrderStatus.Delivered]: '',
+      [OrderStatus.Cancelled]: 'warn',
+      [OrderStatus.Paid]: 'primary'
     };
-    return colors[status] || '';
+    return colors[statusNum] || '';
   }
 }
 

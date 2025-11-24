@@ -15,7 +15,7 @@ namespace OrderManagement.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
-[Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.Manager},{SystemRoles.Waiter}")]
+[Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]
 public class OrdersController(
     OrderManagementDbContext dbContext,
     ITenantContext tenantContext,
@@ -29,17 +29,31 @@ public class OrdersController(
             return BadRequest("Branch context is required.");
         }
 
+        // Validate TableNumber: required for dine-in orders, optional for takeaway
+        if (!request.IsTakeAway && string.IsNullOrWhiteSpace(request.TableNumber))
+        {
+            return BadRequest("Table number is required for dine-in orders.");
+        }
+
+        // Use empty string for takeaway orders when TableNumber is null
+        var tableNumber = request.IsTakeAway 
+            ? (request.TableNumber ?? string.Empty)
+            : request.TableNumber!;
+
         var order = new Order(
             tenantContext.TenantId,
             tenantContext.BranchId.Value,
             $"OM-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}",
             request.IsTakeAway,
-            request.TableNumber);
+            tableNumber);
 
         foreach (var item in request.Items)
         {
             order.AddLine(item.MenuItemId, item.Name, item.Price, item.Quantity);
         }
+
+        // Set order status to Submitted so it appears in kitchen queue
+        order.UpdateStatus(OrderStatus.Submitted);
 
         dbContext.Orders.Add(order);
         await dbContext.SaveChangesAsync(cancellationToken);
