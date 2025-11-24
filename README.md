@@ -45,21 +45,21 @@ The project follows **Clean Architecture** principles with clear separation of c
 ```
 ┌─────────────────────────────────────────┐
 │         OrderManagement.Api             │  ← Presentation Layer
-│         (Controllers, Middleware)      │
+│         (Controllers, Middleware)       │
 └─────────────────────────────────────────┘
                     ↓
 ┌─────────────────────────────────────────┐
-│      OrderManagement.Application       │  ← Application Layer
-│    (Use Cases, Interfaces, DTOs)       │
+│      OrderManagement.Application        │  ← Application Layer
+│    (Use Cases, Interfaces, DTOs)        │
 └─────────────────────────────────────────┘
                     ↓
 ┌─────────────────────────────────────────┐
-│        OrderManagement.Domain          │  ← Domain Layer
-│    (Entities, Value Objects, Enums)   │
+│        OrderManagement.Domain           │  ← Domain Layer
+│    (Entities, Value Objects, Enums)     │
 └─────────────────────────────────────────┘
                     ↓
 ┌─────────────────────────────────────────┐
-│     OrderManagement.Infrastructure     │  ← Infrastructure Layer
+│     OrderManagement.Infrastructure      │  ← Infrastructure Layer
 │  (Data Access, External Services, EF)   │
 └─────────────────────────────────────────┘
 ```
@@ -303,11 +303,11 @@ The system implements role-based access control (RBAC) with the following roles:
 
 | Module | SuperAdmin | Admin | Manager | Waiter | Kitchen | InventoryManager |
 |--------|:----------:|:-----:|:-------:|:------:|:-------:|:----------------:|
-| **Orders - Create/View** | ✅ | ❌ | ✅ | ✅ | ❌ | ❌ |
-| **Orders - Update Status** | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ |
-| **Menu Items (CRUD)** | ✅ | ✅ | ✅ | ❌ | ❌ | ❌ |
-| **Kitchen Queue** | ✅ | ❌ | ✅ | ❌ | ✅ | ❌ |
-| **Reports - Sales/Inventory** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| **Orders - Create/View** | ❌ | ❌ | ✅ | ✅ | ❌ | ❌ |
+| **Orders - Update Status** | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ |
+| **Menu Items (CRUD)** | ❌ | ✅ | ✅ | ❌ | ❌ | ❌ |
+| **Kitchen Queue** | ❌ | ❌ | ✅ | ❌ | ✅ | ❌ |
+| **Reports - Sales/Inventory** | ❌ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Reports - Subscription** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Subscriptions** | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | **Menu Management** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
