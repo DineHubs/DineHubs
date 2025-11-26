@@ -16,6 +16,25 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
             navigationBuilder.WithOwner().HasForeignKey("OrderId");
             navigationBuilder.Property<Guid>("Id");
             navigationBuilder.HasKey("Id");
+            
+            // Explicitly map all OrderLine properties
+            navigationBuilder.Property(l => l.MenuItemId)
+                .IsRequired()
+                .HasColumnName("MenuItemId");
+            
+            navigationBuilder.Property(l => l.Name)
+                .IsRequired()
+                .HasColumnName("Name")
+                .HasMaxLength(500);
+            
+            navigationBuilder.Property(l => l.Price)
+                .IsRequired()
+                .HasColumnName("Price")
+                .HasColumnType("numeric(18,2)");
+            
+            navigationBuilder.Property(l => l.Quantity)
+                .IsRequired()
+                .HasColumnName("Quantity");
         });
     }
 }

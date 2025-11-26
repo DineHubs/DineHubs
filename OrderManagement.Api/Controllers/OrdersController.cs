@@ -9,19 +9,22 @@ using OrderManagement.Domain.Entities;
 using OrderManagement.Domain.Enums;
 using OrderManagement.Domain.Identity;
 using OrderManagement.Infrastructure.Persistence;
+using Serilog;
 
 namespace OrderManagement.Api.Controllers;
 
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
-[Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]
+[Authorize]
 public class OrdersController(
     OrderManagementDbContext dbContext,
     ITenantContext tenantContext,
-    IQrOrderingService qrOrderingService) : ControllerBase
+    IQrOrderingService qrOrderingService,
+    Serilog.ILogger logger) : ControllerBase
 {
     [HttpPost]
+    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request, CancellationToken cancellationToken)
     {
         if (tenantContext.BranchId is null)
@@ -61,6 +64,7 @@ public class OrdersController(
     }
 
     [HttpGet]
+    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]
     public async Task<IActionResult> GetOrders(CancellationToken cancellationToken)
     {
         var query = dbContext.Orders.AsNoTracking()
@@ -79,6 +83,7 @@ public class OrdersController(
     }
 
     [HttpGet("{id:guid}")]
+    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]
     public async Task<IActionResult> GetOrder(Guid id, CancellationToken cancellationToken)
     {
         var order = await dbContext.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
@@ -89,15 +94,38 @@ public class OrdersController(
     [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Kitchen}")]
     public async Task<IActionResult> UpdateStatus(Guid id, [FromQuery] OrderStatus status, CancellationToken cancellationToken)
     {
-        var order = await dbContext.Orders.FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
-        if (order is null)
+        try
         {
-            return NotFound();
-        }
+            // Query order with tenant/branch filtering to ensure security
+            var query = dbContext.Orders.Where(o => o.Id == id && o.TenantId == tenantContext.TenantId);
+            
+            if (tenantContext.BranchId.HasValue)
+            {
+                query = query.Where(o => o.BranchId == tenantContext.BranchId.Value);
+            }
+            
+            var order = await query.FirstOrDefaultAsync(cancellationToken);
+            if (order is null)
+            {
+                logger.Warning("Order {OrderId} not found for tenant {TenantId}, branch {BranchId} when updating status", 
+                    id, tenantContext.TenantId, tenantContext.BranchId);
+                return NotFound();
+            }
 
-        order.UpdateStatus(status);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return NoContent();
+            order.UpdateStatus(status);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            
+            logger.Information("Updated order {OrderId} status to {Status} for tenant {TenantId}, branch {BranchId}", 
+                id, status, tenantContext.TenantId, tenantContext.BranchId);
+            
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Error updating order {OrderId} status to {Status} for tenant {TenantId}, branch {BranchId}", 
+                id, status, tenantContext.TenantId, tenantContext.BranchId);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while updating the order status.");
+        }
     }
 
     [HttpPost("qr")]
