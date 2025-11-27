@@ -1,0 +1,44 @@
+.tenant-list-container {
+  padding: 24px;
+}
+
+.content-card {
+  padding: 24px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.title-section h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+}
+
+.subtitle {
+  margin: 4px 0 0 0;
+  color: #666;
+  font-size: 14px;
+}
+
+.filter-section {
+  margin-bottom: 24px;
+}
+
+.search-field {
+  width: 100%;
+  max-width: 400px;
+}
+
+.table-container {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+}
+

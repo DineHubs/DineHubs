@@ -17,13 +17,31 @@ import { AppRoles } from '../../../../core/constants/roles.constants';
     styleUrl: './user-dialog.component.scss'
 })
 export class UserDialogComponent implements OnInit {
-    roles = [AppRoles.Manager, AppRoles.Waiter, AppRoles.Kitchen, AppRoles.InventoryManager];
+    roles: string[] = [];
     branches: any[] = [];
     private apiService = inject(ApiService);
 
     constructor(@Inject(MAT_DIALOG_DATA) public data: any) { }
 
     ngOnInit(): void {
+        // If SuperAdmin, show all roles; if Admin, restrict to Manager, Waiter, Kitchen, InventoryManager
+        if (this.data.isSuperAdmin) {
+            this.roles = [
+                AppRoles.SuperAdmin,
+                AppRoles.Admin,
+                AppRoles.Manager,
+                AppRoles.Waiter,
+                AppRoles.Kitchen,
+                AppRoles.InventoryManager
+            ];
+        } else {
+            this.roles = [
+                AppRoles.Manager,
+                AppRoles.Waiter,
+                AppRoles.Kitchen,
+                AppRoles.InventoryManager
+            ];
+        }
         this.loadBranches();
     }
 

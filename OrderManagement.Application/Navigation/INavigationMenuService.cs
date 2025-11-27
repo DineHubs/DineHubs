@@ -5,5 +5,6 @@ namespace OrderManagement.Application.Navigation;
 public interface INavigationMenuService
 {
     Task<IReadOnlyCollection<NavigationMenuItem>> GetMenuForRolesAsync(IEnumerable<string> roles, CancellationToken cancellationToken = default);
+    Task SeedMenuForTenantAsync(Guid tenantId, CancellationToken cancellationToken = default);
 }
 

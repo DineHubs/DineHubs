@@ -3,18 +3,33 @@
         <div class="header">
             <div class="title-section">
                 <h2>Users</h2>
-                <p class="subtitle">Manage system users and their roles</p>
+                <p class="subtitle">{{ contextLabel }}</p>
             </div>
-            <button mat-raised-button color="primary" (click)="openAddDialog()">
+            <button mat-raised-button color="primary" (click)="openAddDialog()" [disabled]="isSuperAdmin && !selectedTenantId">
                 <mat-icon>add</mat-icon> Add User
             </button>
         </div>
+
+        @if (isSuperAdmin) {
+            <div class="tenant-selector-section">
+                <mat-form-field appearance="outline" class="tenant-selector">
+                    <mat-label>Select Tenant</mat-label>
+                    <mat-select [(ngModel)]="selectedTenantId" (selectionChange)="onTenantSelected($event.value)">
+                        <mat-option [value]="null">-- Select Tenant --</mat-option>
+                        @for (tenant of tenants; track tenant.id) {
+                            <mat-option [value]="tenant.id">{{ tenant.name }} ({{ tenant.code }})</mat-option>
+                        }
+                    </mat-select>
+                    <mat-icon matPrefix>business</mat-icon>
+                </mat-form-field>
+            </div>
+        }
 
         <div class="filter-section">
             <mat-form-field appearance="outline" class="search-field">
                 <mat-label>Search Users</mat-label>
                 <mat-icon matPrefix>search</mat-icon>
-                <input matInput (keyup)="applyFilter($event)" placeholder="Ex. john@example.com" #input>
+                <input matInput (keyup)="applyFilter($event)" placeholder="Ex. john@example.com" #input [disabled]="isSuperAdmin && !selectedTenantId">
             </mat-form-field>
         </div>
 

@@ -38,8 +38,14 @@
 | **Menu Management** | `/api/v1/menu-management/items/{id}/order` | PUT | `[Authorize(Roles = "SuperAdmin")]` | SuperAdmin only | Update display order |
 | **Menu Management** | `/api/v1/menu-management/items/{id}/toggle` | PUT | `[Authorize(Roles = "SuperAdmin")]` | SuperAdmin only | Toggle menu item |
 | **Menu Management** | `/api/v1/menu-management/items/{id}/permissions` | GET | `[Authorize(Roles = "SuperAdmin")]` | SuperAdmin only | Get permissions |
+| **Tenants** | `/api/v1/Tenants` | GET | `[Authorize(Roles = "SuperAdmin")]` | SuperAdmin only | List all tenants |
 | **Tenants** | `/api/v1/Tenants` | POST | `[Authorize(Roles = "SuperAdmin")]` | SuperAdmin only | Create tenant |
 | **Tenants** | `/api/v1/Tenants/plans` | GET | `[AllowAnonymous]` | All (No auth required) | Get subscription plans |
+| **Tenants** | `/api/v1/Tenants/{tenantId}/users` | GET | `[Authorize(Roles = "SuperAdmin")]` | SuperAdmin only | Get users for tenant |
+| **Branches** | `/api/v1/Branches` | POST | `[Authorize(Roles = "Admin")]` | Admin only | Create branch |
+| **Branches** | `/api/v1/Branches` | GET | `[Authorize(Roles = "Admin")]` | Admin only | List branches |
+| **Auth** | `/api/v1/Auth/forgot-password` | POST | `[AllowAnonymous]` | All (No auth required) | Request password reset |
+| **Auth** | `/api/v1/Auth/reset-password` | POST | `[AllowAnonymous]` | All (No auth required) | Reset password with token |
 
 ---
 
@@ -48,6 +54,11 @@
 | Route | Component | Frontend Guard | Component-Level Check | Allowed Roles | API Endpoint Used |
 |-------|-----------|----------------|----------------------|---------------|-------------------|
 | `/login` | LoginComponent | None (public) | None | All (public) | `POST /api/v1/Auth/login` |
+| `/forgot-password` | ForgotPasswordComponent | None (public) | None | All (public) | `POST /api/v1/Auth/forgot-password` |
+| `/reset-password` | ResetPasswordComponent | None (public) | None | All (public) | `POST /api/v1/Auth/reset-password` |
+| `/tenants` | TenantListComponent | `authGuard` (authenticated) | SuperAdmin only (via navigation menu) | SuperAdmin | `GET /api/v1/Tenants` |
+| `/tenants/create` | TenantCreateComponent | `authGuard` (authenticated) | SuperAdmin only (via navigation menu) | SuperAdmin | `POST /api/v1/Tenants` |
+| `/tenants/:id` | TenantDetailsComponent | `authGuard` (authenticated) | SuperAdmin only (via navigation menu) | SuperAdmin | `GET /api/v1/Tenants/{id}/users` |
 | `/dashboard` | DashboardComponent | `authGuard` (authenticated) | None | All authenticated users | None (display only) |
 | `/menu` | MenuListComponent | `authGuard` (authenticated) | `hasAnyRole(['SuperAdmin', 'Admin', 'Manager'])` | SuperAdmin, Admin, Manager | `GET /api/v1/MenuItems` |
 | `/orders` | OrderListComponent | `authGuard` (authenticated) | None | All authenticated users | `GET /api/v1/Orders` |
@@ -76,6 +87,10 @@
 | **Subscriptions** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Menu Management** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
 | **Tenant Management** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Branch Management** | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **User Management - Own Tenant** | ❌ | ✅ | ❌ | ❌ | ❌ | ❌ |
+| **User Management - All Tenants** | ✅ | ❌ | ❌ | ❌ | ❌ | ❌ |
+| **Forgot Password** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Dashboard** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Settings** | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
 
@@ -144,6 +159,25 @@ To align the code with the documented access matrix, the following changes are n
 - **Frontend**: No component-level check in `ReportsComponent`
 - **Impact**: All authenticated users can access, but subscription report will fail for non-SuperAdmin/Admin
 - **Recommendation**: Add conditional check for subscription report access
+
+### ✅ SYNCHRONIZED: Branch Management
+- **API**: `Admin` only (SuperAdmin removed)
+- **Frontend**: Navigation menu filtered by backend (Admin only)
+
+### ✅ SYNCHRONIZED: Tenant Management
+- **API**: `SuperAdmin` only
+- **Frontend**: Navigation menu filtered by backend (SuperAdmin only)
+- **Implementation**: SuperAdmin can create tenants, view all tenants, and view users per tenant
+
+### ✅ SYNCHRONIZED: User Management
+- **API**: 
+  - SuperAdmin: Can view users across all tenants via `/api/v1/Tenants/{tenantId}/users`
+  - Admin: Can view and create users in own tenant via `/api/v1/Users`
+  - Admin role restrictions: Can only create Manager, Waiter, Kitchen, InventoryManager roles
+- **Frontend**: 
+  - SuperAdmin: Shows tenant selector, then users for selected tenant
+  - Admin: Shows users in current tenant only
+  - User dialog restricts roles based on current user role
 
 ### ⚠️ ISSUE 5: AuthService.hasAnyRole() Bypass Logic
 - **Current Behavior**: `hasAnyRole()` returns `true` for SuperAdmin regardless of roles parameter

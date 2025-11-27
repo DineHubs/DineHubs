@@ -1,0 +1,57 @@
+.tenant-details-container {
+  padding: 24px;
+}
+
+.header-actions {
+  margin-bottom: 24px;
+}
+
+.tenant-info-card,
+.tabs-card {
+  margin-bottom: 24px;
+}
+
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-weight: 500;
+  color: #666;
+  font-size: 14px;
+}
+
+.value {
+  font-size: 16px;
+  color: #333;
+}
+
+.tab-content {
+  padding: 24px;
+}
+
+.users-table {
+  width: 100%;
+}
+
+.no-data {
+  text-align: center;
+  padding: 24px;
+  color: #666;
+}
+
+.loading {
+  text-align: center;
+  padding: 24px;
+  color: #666;
+}
+

@@ -2,10 +2,69 @@
   padding: 24px;
 }
 
-h1 {
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 24px;
-  font-size: 32px;
-  font-weight: 500;
+  
+  h1 {
+    margin: 0;
+    font-size: 32px;
+    font-weight: 500;
+  }
+}
+
+.period-selector {
+  width: 200px;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px;
+  gap: 16px;
+  
+  p {
+    color: #666;
+    font-size: 16px;
+  }
+}
+
+.error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 64px;
+  gap: 16px;
+  text-align: center;
+  
+  .error-icon {
+    font-size: 64px;
+    width: 64px;
+    height: 64px;
+    color: #d32f2f;
+  }
+  
+  h2 {
+    margin: 0;
+    color: #333;
+    font-size: 24px;
+    font-weight: 500;
+  }
+  
+  p {
+    color: #666;
+    font-size: 16px;
+    margin: 0 0 16px 0;
+  }
+  
+  button {
+    margin-top: 8px;
+  }
 }
 
 .stats-grid {
@@ -21,6 +80,10 @@ h1 {
   &:hover {
     transform: translateY(-4px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  }
+  
+  &[style*="cursor: default"]:hover {
+    transform: none;
   }
 }
 
@@ -62,14 +125,39 @@ h1 {
   color: #666;
 }
 
-.quick-actions {
+.charts-section {
   margin-top: 32px;
+  margin-bottom: 32px;
+  
+  h2 {
+    margin-bottom: 16px;
+    font-size: 24px;
+    font-weight: 500;
+  }
 }
 
-.quick-actions h2 {
-  margin-bottom: 16px;
-  font-size: 24px;
-  font-weight: 500;
+.charts-grid {
+  margin-bottom: 24px;
+  
+  mat-card {
+    width: 100%;
+    height: 100%;
+    
+    mat-card-content {
+      height: 100%;
+      padding: 16px;
+    }
+  }
+}
+
+.quick-actions {
+  margin-top: 32px;
+  
+  h2 {
+    margin-bottom: 16px;
+    font-size: 24px;
+    font-weight: 500;
+  }
 }
 
 .actions-grid {
@@ -88,6 +176,16 @@ h1 {
 }
 
 @media (max-width: 960px) {
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+    
+    .period-selector {
+      width: 100%;
+    }
+  }
+  
   .stats-grid {
     ::ng-deep mat-grid-list {
       mat-grid-tile {
@@ -98,8 +196,15 @@ h1 {
     }
   }
   
+  .charts-grid {
+    ::ng-deep mat-grid-list {
+      mat-grid-tile {
+        grid-column: span 2;
+      }
+    }
+  }
+  
   .actions-grid {
     grid-template-columns: 1fr;
   }
 }
-

@@ -32,6 +32,19 @@
     }
 }
 
+.tenant-selector-section {
+  margin-bottom: 24px;
+
+  .tenant-selector {
+    width: 100%;
+    max-width: 400px;
+
+    mat-icon {
+      color: #666;
+    }
+  }
+}
+
 .filter-section {
     margin-bottom: 16px;
 

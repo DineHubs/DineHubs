@@ -50,7 +50,7 @@ public static class NavigationMenuSeeder
         }
     }
 
-    private static async Task SeedMenuForTenantAsync(
+    public static async Task SeedMenuForTenantAsync(
         OrderManagementDbContext dbContext,
         Guid tenantId,
         CancellationToken cancellationToken)

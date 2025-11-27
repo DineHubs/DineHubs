@@ -11,7 +11,7 @@ namespace OrderManagement.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
-[Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.Admin}")]
+[Authorize(Roles = SystemRoles.Admin)]
 public class BranchesController(
     IBranchService branchService,
     ITenantContext tenantContext) : ControllerBase

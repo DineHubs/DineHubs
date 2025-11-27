@@ -13,6 +13,29 @@ public sealed class NavigationMenuService(
     ITenantContext tenantContext,
     Serilog.ILogger logger) : INavigationMenuService
 {
+    public async Task SeedMenuForTenantAsync(Guid tenantId, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var existingMenu = await dbContext.NavigationMenuItems
+                .Where(m => m.TenantId == tenantId)
+                .AnyAsync(cancellationToken);
+
+            if (existingMenu)
+            {
+                logger.Information("Navigation menu already exists for tenant {TenantId}", tenantId);
+                return;
+            }
+
+            await NavigationMenuSeeder.SeedMenuForTenantAsync(dbContext, tenantId, cancellationToken);
+            logger.Information("Seeded navigation menu for tenant {TenantId}", tenantId);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Error seeding navigation menu for tenant {TenantId}", tenantId);
+            throw;
+        }
+    }
     public async Task<IReadOnlyCollection<ApplicationMenuItem>> GetMenuForRolesAsync(IEnumerable<string> roles, CancellationToken cancellationToken = default)
     {
         try

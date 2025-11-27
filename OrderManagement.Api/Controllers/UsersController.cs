@@ -13,13 +13,31 @@ namespace OrderManagement.Api.Controllers;
 [Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.Admin}")]
 public class UsersController(
     IUserService userService,
-    ITenantContext tenantContext) : ControllerBase
+    ITenantContext tenantContext,
+    ICurrentUserContext currentUserContext) : ControllerBase
 {
+    private static readonly string[] AdminAllowedRoles = 
+    [
+        SystemRoles.Manager,
+        SystemRoles.Waiter,
+        SystemRoles.Kitchen,
+        SystemRoles.InventoryManager
+    ];
+
     [HttpPost]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request, CancellationToken cancellationToken)
     {
         try
         {
+            // If current user is Admin (not SuperAdmin), restrict role creation
+            if (currentUserContext.IsInRole(SystemRoles.Admin) && !currentUserContext.IsInRole(SystemRoles.SuperAdmin))
+            {
+                if (!AdminAllowedRoles.Contains(request.Role, StringComparer.OrdinalIgnoreCase))
+                {
+                    return BadRequest(new { Message = $"Admin users can only create users with roles: {string.Join(", ", AdminAllowedRoles)}" });
+                }
+            }
+
             var user = await userService.CreateUserAsync(tenantContext.TenantId, request.Email, request.Password, request.Role, request.BranchId, cancellationToken);
             return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, new { user.Id, user.Email });
         }
