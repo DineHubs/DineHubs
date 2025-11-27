@@ -1,14 +1,12 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using OrderManagement.Api.Contracts.Orders;
 using OrderManagement.Application.Abstractions;
 using OrderManagement.Application.Ordering;
-using OrderManagement.Domain.Entities;
+using OrderManagement.Application.Ordering.Models;
 using OrderManagement.Domain.Enums;
 using OrderManagement.Domain.Identity;
-using OrderManagement.Infrastructure.Persistence;
 using Serilog;
 
 namespace OrderManagement.Api.Controllers;
@@ -18,7 +16,7 @@ namespace OrderManagement.Api.Controllers;
 [Route("api/v{version:apiVersion}/[controller]")]
 [Authorize]
 public class OrdersController(
-    OrderManagementDbContext dbContext,
+    IOrderService orderService,
     ITenantContext tenantContext,
     IQrOrderingService qrOrderingService,
     Serilog.ILogger logger) : ControllerBase
@@ -27,67 +25,87 @@ public class OrdersController(
     [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]
     public async Task<IActionResult> CreateOrder([FromBody] CreateOrderRequest request, CancellationToken cancellationToken)
     {
-        if (tenantContext.BranchId is null)
+        try
         {
-            return BadRequest("Branch context is required.");
-        }
+            if (tenantContext.BranchId is null)
+            {
+                return BadRequest(new { Message = "Branch context is required." });
+            }
 
-        // Validate TableNumber: required for dine-in orders, optional for takeaway
-        if (!request.IsTakeAway && string.IsNullOrWhiteSpace(request.TableNumber))
+            var dto = new CreateOrderDto(
+                request.IsTakeAway,
+                request.TableNumber,
+                request.Items.Select(i => new OrderLineDto(i.MenuItemId, i.Name, i.Price, i.Quantity)).ToList());
+
+            var order = await orderService.CreateOrderAsync(
+                dto, 
+                tenantContext.TenantId, 
+                tenantContext.BranchId.Value, 
+                cancellationToken);
+
+            return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
+        }
+        catch (InvalidOperationException ex)
         {
-            return BadRequest("Table number is required for dine-in orders.");
+            logger.Warning("Order creation failed: {Message}", ex.Message);
+            return BadRequest(new { Message = ex.Message });
         }
-
-        // Use empty string for takeaway orders when TableNumber is null
-        var tableNumber = request.IsTakeAway 
-            ? (request.TableNumber ?? string.Empty)
-            : request.TableNumber!;
-
-        var order = new Order(
-            tenantContext.TenantId,
-            tenantContext.BranchId.Value,
-            $"OM-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}",
-            request.IsTakeAway,
-            tableNumber);
-
-        foreach (var item in request.Items)
+        catch (Exception ex)
         {
-            order.AddLine(item.MenuItemId, item.Name, item.Price, item.Quantity);
+            logger.Error(ex, "Unexpected error creating order");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating the order.");
         }
-
-        // Set order status to Submitted so it appears in kitchen queue
-        order.UpdateStatus(OrderStatus.Submitted);
-
-        dbContext.Orders.Add(order);
-        await dbContext.SaveChangesAsync(cancellationToken);
-        return CreatedAtAction(nameof(GetOrder), new { id = order.Id }, order);
     }
 
     [HttpGet]
     [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]
     public async Task<IActionResult> GetOrders(CancellationToken cancellationToken)
     {
-        var query = dbContext.Orders.AsNoTracking()
-            .Where(o => o.TenantId == tenantContext.TenantId);
-
-        if (tenantContext.BranchId.HasValue)
+        try
         {
-            query = query.Where(o => o.BranchId == tenantContext.BranchId.Value);
+            var orders = await orderService.GetOrdersAsync(
+                tenantContext.TenantId, 
+                tenantContext.BranchId, 
+                cancellationToken);
+            
+            return Ok(orders);
         }
-
-        var orders = await query
-            .OrderByDescending(o => o.CreatedAt)
-            .ToListAsync(cancellationToken);
-        
-        return Ok(orders);
+        catch (InvalidOperationException ex)
+        {
+            logger.Warning("Error retrieving orders: {Message}", ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Unexpected error retrieving orders");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving orders.");
+        }
     }
 
     [HttpGet("{id:guid}")]
     [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]
     public async Task<IActionResult> GetOrder(Guid id, CancellationToken cancellationToken)
     {
-        var order = await dbContext.Orders.AsNoTracking().FirstOrDefaultAsync(o => o.Id == id, cancellationToken);
-        return order is null ? NotFound() : Ok(order);
+        try
+        {
+            var order = await orderService.GetOrderByIdAsync(
+                id, 
+                tenantContext.TenantId, 
+                tenantContext.BranchId, 
+                cancellationToken);
+            
+            return order is null ? NotFound() : Ok(order);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.Warning("Error retrieving order {OrderId}: {Message}", id, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Unexpected error retrieving order {OrderId}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving the order.");
+        }
     }
 
     [HttpPatch("{id:guid}/status")]
@@ -96,34 +114,27 @@ public class OrdersController(
     {
         try
         {
-            // Query order with tenant/branch filtering to ensure security
-            var query = dbContext.Orders.Where(o => o.Id == id && o.TenantId == tenantContext.TenantId);
-            
-            if (tenantContext.BranchId.HasValue)
-            {
-                query = query.Where(o => o.BranchId == tenantContext.BranchId.Value);
-            }
-            
-            var order = await query.FirstOrDefaultAsync(cancellationToken);
-            if (order is null)
-            {
-                logger.Warning("Order {OrderId} not found for tenant {TenantId}, branch {BranchId} when updating status", 
-                    id, tenantContext.TenantId, tenantContext.BranchId);
-                return NotFound();
-            }
-
-            order.UpdateStatus(status);
-            await dbContext.SaveChangesAsync(cancellationToken);
-            
-            logger.Information("Updated order {OrderId} status to {Status} for tenant {TenantId}, branch {BranchId}", 
-                id, status, tenantContext.TenantId, tenantContext.BranchId);
+            await orderService.UpdateOrderStatusAsync(
+                id, 
+                status, 
+                tenantContext.TenantId, 
+                tenantContext.BranchId, 
+                cancellationToken);
             
             return NoContent();
         }
+        catch (InvalidOperationException ex)
+        {
+            if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            logger.Warning("Error updating order status: {Message}", ex.Message);
+            return BadRequest(new { Message = ex.Message });
+        }
         catch (Exception ex)
         {
-            logger.Error(ex, "Error updating order {OrderId} status to {Status} for tenant {TenantId}, branch {BranchId}", 
-                id, status, tenantContext.TenantId, tenantContext.BranchId);
+            logger.Error(ex, "Unexpected error updating order {OrderId} status", id);
             return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while updating the order status.");
         }
     }

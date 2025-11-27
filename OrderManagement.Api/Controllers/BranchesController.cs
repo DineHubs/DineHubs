@@ -1,9 +1,9 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 using OrderManagement.Application.Abstractions;
 using OrderManagement.Application.Branches;
-using OrderManagement.Domain.Entities;
 using OrderManagement.Domain.Identity;
 
 namespace OrderManagement.Api.Controllers;
@@ -14,7 +14,8 @@ namespace OrderManagement.Api.Controllers;
 [Authorize(Roles = SystemRoles.Admin)]
 public class BranchesController(
     IBranchService branchService,
-    ITenantContext tenantContext) : ControllerBase
+    ITenantContext tenantContext,
+    Serilog.ILogger logger) : ControllerBase
 {
     [HttpPost]
     public async Task<IActionResult> CreateBranch([FromBody] CreateBranchRequest request, CancellationToken cancellationToken)
@@ -26,15 +27,29 @@ public class BranchesController(
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            logger.Warning("Error creating branch: {Message}", ex.Message);
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Unexpected error creating branch");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating the branch.");
         }
     }
 
     [HttpGet]
     public async Task<IActionResult> GetBranches(CancellationToken cancellationToken)
     {
-        var branches = await branchService.GetBranchesAsync(tenantContext.TenantId, cancellationToken);
-        return Ok(branches);
+        try
+        {
+            var branches = await branchService.GetBranchesAsync(tenantContext.TenantId, cancellationToken);
+            return Ok(branches);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Unexpected error retrieving branches");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving branches.");
+        }
     }
 }
 

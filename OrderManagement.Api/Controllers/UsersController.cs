@@ -1,6 +1,7 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 using OrderManagement.Application.Abstractions;
 using OrderManagement.Application.Users;
 using OrderManagement.Domain.Identity;
@@ -14,44 +15,56 @@ namespace OrderManagement.Api.Controllers;
 public class UsersController(
     IUserService userService,
     ITenantContext tenantContext,
-    ICurrentUserContext currentUserContext) : ControllerBase
+    ICurrentUserContext currentUserContext,
+    Serilog.ILogger logger) : ControllerBase
 {
-    private static readonly string[] AdminAllowedRoles = 
-    [
-        SystemRoles.Manager,
-        SystemRoles.Waiter,
-        SystemRoles.Kitchen,
-        SystemRoles.InventoryManager
-    ];
 
     [HttpPost]
     public async Task<IActionResult> CreateUser([FromBody] CreateUserRequest request, CancellationToken cancellationToken)
     {
         try
         {
-            // If current user is Admin (not SuperAdmin), restrict role creation
-            if (currentUserContext.IsInRole(SystemRoles.Admin) && !currentUserContext.IsInRole(SystemRoles.SuperAdmin))
-            {
-                if (!AdminAllowedRoles.Contains(request.Role, StringComparer.OrdinalIgnoreCase))
-                {
-                    return BadRequest(new { Message = $"Admin users can only create users with roles: {string.Join(", ", AdminAllowedRoles)}" });
-                }
-            }
-
-            var user = await userService.CreateUserAsync(tenantContext.TenantId, request.Email, request.Password, request.Role, request.BranchId, cancellationToken);
+            var user = await userService.CreateUserAsync(
+                tenantContext.TenantId, 
+                request.Email, 
+                request.Password, 
+                request.Role, 
+                request.BranchId,
+                currentUserContext.Roles,
+                cancellationToken);
+            
             return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, new { user.Id, user.Email });
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(ex.Message);
+            logger.Warning("Error creating user: {Message}", ex.Message);
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Unexpected error creating user");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating the user.");
         }
     }
 
     [HttpGet]
     public async Task<IActionResult> GetUsers(CancellationToken cancellationToken)
     {
-        var users = await userService.GetUsersAsync(tenantContext.TenantId, cancellationToken);
-        return Ok(users);
+        try
+        {
+            var users = await userService.GetUsersAsync(tenantContext.TenantId, cancellationToken);
+            return Ok(users);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.Warning("Error retrieving users: {Message}", ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Unexpected error retrieving users");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving users.");
+        }
     }
 }
 

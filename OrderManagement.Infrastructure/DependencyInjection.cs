@@ -114,6 +114,7 @@ public static class DependencyInjection
         });
 
         services.AddScoped<IJwtTokenGenerator, JwtTokenGenerator>();
+        services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IEmailNotificationService, EmailNotificationService>();
         services.AddScoped<IWhatsAppNotificationService, WhatsAppNotificationService>();
         services.AddScoped<IBillingDispatcher, BillingDispatcher>();
@@ -121,11 +122,13 @@ public static class DependencyInjection
         services.AddScoped<ISubscriptionService, SubscriptionService>();
         services.AddScoped<IUsageTracker, UsageTracker>();
         services.AddScoped<ITenantProvisioningService, TenantProvisioningService>();
+        services.AddScoped<ITenantService, TenantService>();
         services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
         services.AddScoped<IPaymentGateway, StripePaymentGateway>();
         services.AddScoped<IReportingService, ReportingService>();
         services.AddScoped<IInventoryService, InventoryService>();
         services.AddScoped<IQrOrderingService, QrOrderingService>();
+        services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IKitchenService, KitchenService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<INavigationMenuService, NavigationMenuService>();
