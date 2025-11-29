@@ -28,6 +28,62 @@
       </button>
     </div>
   } @else {
+    <!-- Empty State Message -->
+    @if (isEmpty) {
+      <div class="empty-state-container">
+        <mat-card class="empty-state-card">
+          <mat-card-content>
+            <div class="empty-state-content">
+              <mat-icon class="empty-state-icon">dashboard</mat-icon>
+              <h2>Welcome to Your Dashboard!</h2>
+              <p>Your dashboard is empty because you haven't created any orders yet.</p>
+              <p class="empty-state-hint">Get started by:</p>
+              <ul class="empty-state-actions">
+                @if (isManager || isAdmin || isSuperAdmin) {
+                  <li>
+                    <mat-icon>restaurant_menu</mat-icon>
+                    <span>Add menu items to your catalog</span>
+                  </li>
+                }
+                @if (isManager || isWaiter) {
+                  <li>
+                    <mat-icon>add_shopping_cart</mat-icon>
+                    <span>Create your first order</span>
+                  </li>
+                }
+                @if (isAdmin || isSuperAdmin) {
+                  <li>
+                    <mat-icon>people</mat-icon>
+                    <span>Add users to your team</span>
+                  </li>
+                }
+                @if (isAdmin || isSuperAdmin) {
+                  <li>
+                    <mat-icon>store</mat-icon>
+                    <span>Set up additional branches</span>
+                  </li>
+                }
+              </ul>
+              <div class="empty-state-buttons">
+                @if (isManager || isWaiter) {
+                  <button mat-raised-button color="primary" routerLink="/orders/create">
+                    <mat-icon>add_shopping_cart</mat-icon>
+                    Create First Order
+                  </button>
+                }
+                @if (isManager || isAdmin || isSuperAdmin) {
+                  <button mat-raised-button routerLink="/menu">
+                    <mat-icon>restaurant_menu</mat-icon>
+                    Manage Menu
+                  </button>
+                }
+              </div>
+            </div>
+          </mat-card-content>
+        </mat-card>
+      </div>
+    }
+
     <!-- Stat Cards -->
     <mat-grid-list cols="4" rowHeight="150px" gutterSize="16px" class="stats-grid">
       @for (stat of statCards; track stat.title) {

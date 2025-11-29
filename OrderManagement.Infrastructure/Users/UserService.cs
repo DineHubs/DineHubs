@@ -26,16 +26,47 @@ public class UserService(
 
     public void ValidateUserCreationRole(string requestedRole, IReadOnlyCollection<string> currentUserRoles)
     {
-        // If current user is Admin (not SuperAdmin), restrict role creation
-        if (currentUserRoles.Contains(SystemRoles.Admin, StringComparer.OrdinalIgnoreCase) 
-            && !currentUserRoles.Contains(SystemRoles.SuperAdmin, StringComparer.OrdinalIgnoreCase))
+        // Validate requested role is not null or empty
+        if (string.IsNullOrWhiteSpace(requestedRole))
+        {
+            throw new InvalidOperationException("Role is required.");
+        }
+
+        // Validate requested role is a valid system role
+        if (!SystemRoles.All.Contains(requestedRole, StringComparer.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Invalid role '{requestedRole}'. Valid roles are: {string.Join(", ", SystemRoles.All)}");
+        }
+
+        // Check if current user is SuperAdmin - SuperAdmin can create any role
+        var isSuperAdmin = currentUserRoles.Contains(SystemRoles.SuperAdmin, StringComparer.OrdinalIgnoreCase);
+        if (isSuperAdmin)
+        {
+            logger.Information("SuperAdmin creating user with role {Role}", requestedRole);
+            return; // SuperAdmin can create any role
+        }
+
+        // Check if current user is Admin (not SuperAdmin) - Admin has restrictions
+        var isAdmin = currentUserRoles.Contains(SystemRoles.Admin, StringComparer.OrdinalIgnoreCase);
+        if (isAdmin)
         {
             if (!AdminAllowedRoles.Contains(requestedRole, StringComparer.OrdinalIgnoreCase))
             {
+                logger.Warning("Admin user attempted to create user with restricted role {Role}. Allowed roles: {AllowedRoles}", 
+                    requestedRole, string.Join(", ", AdminAllowedRoles));
                 throw new InvalidOperationException(
                     $"Admin users can only create users with roles: {string.Join(", ", AdminAllowedRoles)}");
             }
+            logger.Information("Admin creating user with role {Role}", requestedRole);
+            return;
         }
+
+        // If user is neither SuperAdmin nor Admin, they shouldn't be able to create users
+        // This should be caught by authorization, but we'll validate here too
+        logger.Warning("User with roles {Roles} attempted to create user. Only SuperAdmin and Admin can create users.", 
+            string.Join(", ", currentUserRoles));
+        throw new InvalidOperationException("Only SuperAdmin and Admin users can create new users.");
     }
 
     public async Task<ApplicationUser> CreateUserAsync(Guid tenantId, string email, string password, string role, Guid? branchId, IReadOnlyCollection<string> currentUserRoles, CancellationToken cancellationToken)

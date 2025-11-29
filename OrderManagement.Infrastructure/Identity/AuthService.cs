@@ -37,7 +37,7 @@ public sealed class AuthService(
             var accessToken = tokenGenerator.GenerateAccessToken(user.Id, user.Email ?? string.Empty, user.TenantId, user.BranchId, roles);
             
             logger.Information("User {Email} logged in successfully", email);
-            return new LoginResult(accessToken, roles);
+            return new LoginResult(accessToken, roles.ToList());
         }
         catch (InvalidOperationException)
         {

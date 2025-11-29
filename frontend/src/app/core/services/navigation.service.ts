@@ -17,8 +17,10 @@ export class NavigationService {
   loadMenu(): Observable<NavigationMenuItem[]> {
     return this.apiService.get<NavigationMenuItem[]>('Navigation/menu').pipe(
       tap(items => {
-        const filteredItems = this.filterMenuByRoles(items);
-        this.menuItems.set(this.buildMenuTree(filteredItems));
+        // Backend already filters by roles, but we do a final client-side check for security
+        // This ensures menu items are properly filtered and tree structure is maintained
+        const filteredItems = this.filterMenuByRolesRecursive(items);
+        this.menuItems.set(filteredItems);
       }),
       catchError(error => {
         console.error('Error loading navigation menu:', error);
@@ -27,36 +29,48 @@ export class NavigationService {
     );
   }
 
-  private filterMenuByRoles(items: NavigationMenuItem[]): NavigationMenuItem[] {
+  /**
+   * Recursively filters menu items by user roles
+   * Hides items that the user doesn't have access to
+   */
+  private filterMenuByRolesRecursive(items: NavigationMenuItem[]): NavigationMenuItem[] {
     const userRoles = this.authService.currentUser()?.roles || [];
-    return items.filter(item => {
-      if (item.allowedRoles.length === 0) return true;
-      return item.allowedRoles.some(role => userRoles.includes(role));
-    });
-  }
+    
+    if (!userRoles || userRoles.length === 0) {
+      return []; // No roles, no menu items
+    }
 
-  private buildMenuTree(items: NavigationMenuItem[]): NavigationMenuItem[] {
-    const itemMap = new Map<string, NavigationMenuItem>();
-    const rootItems: NavigationMenuItem[] = [];
+    const filteredItems: NavigationMenuItem[] = [];
 
-    items.forEach(item => {
-      itemMap.set(item.id, { ...item, children: [] });
-    });
+    for (const item of items) {
+      // Check if user has access to this menu item
+      const hasAccess = item.allowedRoles && item.allowedRoles.length > 0
+        ? item.allowedRoles.some(role => userRoles.includes(role))
+        : false; // Hide items without role restrictions for security
 
-    items.forEach(item => {
-      const menuItem = itemMap.get(item.id)!;
-      if (item.parentId) {
-        const parent = itemMap.get(item.parentId);
-        if (parent) {
-          parent.children = parent.children || [];
-          parent.children.push(menuItem);
-        }
-      } else {
-        rootItems.push(menuItem);
+      if (!hasAccess) {
+        continue; // Skip this item
       }
-    });
 
-    return rootItems;
+      // Recursively filter children
+      let filteredChildren: NavigationMenuItem[] | undefined;
+      if (item.children && item.children.length > 0) {
+        filteredChildren = this.filterMenuByRolesRecursive(item.children);
+        
+        // If all children are filtered out and parent has no route, hide parent too
+        if (filteredChildren.length === 0 && !item.route) {
+          continue; // Skip this item
+        }
+      }
+
+      // Add filtered item with filtered children
+      filteredItems.push({
+        ...item,
+        children: filteredChildren && filteredChildren.length > 0 ? filteredChildren : undefined
+      });
+    }
+
+    return filteredItems;
   }
 }
 

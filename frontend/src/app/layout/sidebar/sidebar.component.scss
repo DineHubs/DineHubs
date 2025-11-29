@@ -37,3 +37,14 @@ a[mat-list-item] {
   padding-left: 16px;
 }
 
+.empty-menu-message {
+  padding: 24px 16px;
+  text-align: center;
+  color: #757575;
+  font-size: 14px;
+  
+  p {
+    margin: 0;
+  }
+}
+

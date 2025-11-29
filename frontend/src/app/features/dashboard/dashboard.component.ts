@@ -87,6 +87,15 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isWaiter = false;
   isInventoryManager = false;
 
+  // Check if dashboard is empty (no data)
+  get isEmpty(): boolean {
+    if (!this.stats) return false;
+    return this.stats.thisMonthRevenue === 0 && 
+           this.stats.thisMonthOrdersCount === 0 && 
+           this.stats.todayRevenue === 0 && 
+           this.stats.todayOrdersCount === 0;
+  }
+
   ngOnInit(): void {
     this.checkUserRoles();
     this.loadDashboardData();

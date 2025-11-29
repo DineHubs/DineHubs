@@ -11,7 +11,6 @@ namespace OrderManagement.Infrastructure.Ordering;
 
 public sealed class OrderService(
     OrderManagementDbContext dbContext,
-    ITenantContext tenantContext,
     Serilog.ILogger logger) : IOrderService
 {
     public async Task<Order> CreateOrderAsync(CreateOrderDto dto, Guid tenantId, Guid branchId, CancellationToken cancellationToken)

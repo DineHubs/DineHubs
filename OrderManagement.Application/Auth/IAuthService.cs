@@ -1,3 +1,5 @@
+using OrderManagement.Application.Auth.Models;
+
 namespace OrderManagement.Application.Auth;
 
 public interface IAuthService

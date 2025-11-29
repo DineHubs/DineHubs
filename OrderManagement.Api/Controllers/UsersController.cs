@@ -24,6 +24,10 @@ public class UsersController(
     {
         try
         {
+            // Log request details for debugging
+            logger.Information("Creating user request - Email: {Email}, Role: {Role}, CurrentUserRoles: {Roles}, TenantId: {TenantId}", 
+                request.Email, request.Role, string.Join(", ", currentUserContext.Roles), tenantContext.TenantId);
+
             var user = await userService.CreateUserAsync(
                 tenantContext.TenantId, 
                 request.Email, 
@@ -33,16 +37,18 @@ public class UsersController(
                 currentUserContext.Roles,
                 cancellationToken);
             
+            logger.Information("Successfully created user {Email} with role {Role}", request.Email, request.Role);
             return CreatedAtAction(nameof(GetUsers), new { id = user.Id }, new { user.Id, user.Email });
         }
         catch (InvalidOperationException ex)
         {
-            logger.Warning("Error creating user: {Message}", ex.Message);
+            logger.Warning("Error creating user: {Message}. Request: Email={Email}, Role={Role}, CurrentUserRoles={Roles}", 
+                ex.Message, request.Email, request.Role, string.Join(", ", currentUserContext.Roles));
             return BadRequest(new { Message = ex.Message });
         }
         catch (Exception ex)
         {
-            logger.Error(ex, "Unexpected error creating user");
+            logger.Error(ex, "Unexpected error creating user. Request: Email={Email}, Role={Role}", request.Email, request.Role);
             return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating the user.");
         }
     }

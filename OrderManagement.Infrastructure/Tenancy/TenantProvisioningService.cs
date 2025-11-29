@@ -50,9 +50,9 @@ public sealed class TenantProvisioningService(
                 EmailConfirmed = false // Will need email confirmation for password reset
             };
 
-            // Generate a temporary password (user will reset via forgot password)
-            var tempPassword = GenerateTemporaryPassword();
-            var createResult = await userManager.CreateAsync(adminUser, tempPassword);
+            // Use default password for new tenant admin
+            const string defaultPassword = "P@$$w0rd";
+            var createResult = await userManager.CreateAsync(adminUser, defaultPassword);
             
             if (!createResult.Succeeded)
             {
@@ -83,7 +83,7 @@ public sealed class TenantProvisioningService(
             await navigationMenuService.SeedMenuForTenantAsync(tenant.Id, cancellationToken);
             logger.Information("Seeded navigation menu for tenant {TenantId}", tenant.Id);
 
-            logger.Information("Tenant initialization completed for {TenantCode} (Id: {TenantId}, Admin: {Admin})", 
+            logger.Information("Tenant initialization completed for {TenantCode} (Id: {TenantId}, Admin: {Admin}) with default password", 
                 code, tenant.Id, adminEmail);
             
             return tenant;
@@ -97,16 +97,6 @@ public sealed class TenantProvisioningService(
             logger.Error(ex, "Error creating tenant {Code} for admin {Admin}", code, adminEmail);
             throw;
         }
-    }
-
-    private static string GenerateTemporaryPassword()
-    {
-        // Generate a secure temporary password
-        const string chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-        var random = new Random();
-        var password = new string(Enumerable.Repeat(chars, 16)
-            .Select(s => s[random.Next(s.Length)]).ToArray());
-        return password;
     }
 }
 

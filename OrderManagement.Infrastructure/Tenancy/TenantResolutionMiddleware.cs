@@ -29,6 +29,7 @@ public sealed class TenantResolutionMiddleware
         {
             var tenantContext = context.RequestServices.GetRequiredService<ITenantContext>();
             var dbContext = context.RequestServices.GetRequiredService<OrderManagementDbContext>();
+            var tenantResolved = false;
 
             if (_options.Strategy.Equals("Header", StringComparison.OrdinalIgnoreCase))
             {
@@ -48,16 +49,56 @@ public sealed class TenantResolutionMiddleware
                                 .FirstOrDefaultAsync(b => b.Code == branchCode && b.TenantId == tenant.Id);
                             (tenantContext as TenantContext)?.SetBranch(branch?.Id, branch?.Code);
                         }
+                        
+                        tenantResolved = true;
+                        Log.Debug("Tenant resolved from HTTP header: {TenantCode} (Id: {TenantId})", tenantCode, tenant.Id);
                     }
                     else
                     {
                         Log.Warning("Tenant with code {TenantCode} not found in database", tenantCode);
                     }
                 }
-                else if (_options.DefaultTenantId != Guid.Empty)
+            }
+
+            // If tenant not resolved from headers, try to extract from JWT token claims
+            if (!tenantResolved && context.User?.Identity?.IsAuthenticated == true)
+            {
+                var tenantIdClaim = context.User.FindFirst("tenantId")?.Value;
+                var branchIdClaim = context.User.FindFirst("branchId")?.Value;
+
+                if (!string.IsNullOrWhiteSpace(tenantIdClaim) && Guid.TryParse(tenantIdClaim, out var tenantId))
                 {
-                    (tenantContext as TenantContext)?.SetTenant(_options.DefaultTenantId, null);
+                    var tenant = await dbContext.Tenants.AsNoTracking().FirstOrDefaultAsync(t => t.Id == tenantId);
+                    if (tenant is not null)
+                    {
+                        (tenantContext as TenantContext)?.SetTenant(tenant.Id, tenant.Code);
+                        tenantResolved = true;
+                        Log.Debug("Tenant resolved from JWT claim: {TenantCode} (Id: {TenantId})", tenant.Code, tenant.Id);
+
+                        // Set branch from JWT claim if present
+                        if (!string.IsNullOrWhiteSpace(branchIdClaim) && Guid.TryParse(branchIdClaim, out var branchId))
+                        {
+                            var branch = await dbContext.Branches.AsNoTracking()
+                                .FirstOrDefaultAsync(b => b.Id == branchId && b.TenantId == tenant.Id);
+                            if (branch is not null)
+                            {
+                                (tenantContext as TenantContext)?.SetBranch(branch.Id, branch.Code);
+                                Log.Debug("Branch resolved from JWT claim: {BranchCode} (Id: {BranchId})", branch.Code, branch.Id);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        Log.Warning("Tenant with ID {TenantId} from JWT claim not found in database", tenantId);
+                    }
                 }
+            }
+
+            // Fallback to default tenant if configured and no tenant resolved yet
+            if (!tenantResolved && _options.DefaultTenantId != Guid.Empty)
+            {
+                (tenantContext as TenantContext)?.SetTenant(_options.DefaultTenantId, null);
+                Log.Debug("Using default tenant ID: {TenantId}", _options.DefaultTenantId);
             }
 
             await _next(context);
