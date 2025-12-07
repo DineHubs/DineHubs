@@ -42,6 +42,31 @@ public class TenantsController(
         }
     }
 
+    [HttpGet("{tenantId:guid}")]
+    [Authorize(Roles = SystemRoles.SuperAdmin)]
+    public async Task<IActionResult> GetTenant(Guid tenantId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var tenant = await tenantService.GetTenantByIdAsync(tenantId, cancellationToken);
+            if (tenant == null)
+            {
+                return NotFound(new { Message = $"Tenant with ID {tenantId} not found." });
+            }
+            return Ok(tenant);
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.Warning("Error retrieving tenant {TenantId}: {Message}", tenantId, ex.Message);
+            return StatusCode(StatusCodes.Status500InternalServerError, ex.Message);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Unexpected error retrieving tenant {TenantId}", tenantId);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving the tenant.");
+        }
+    }
+
     [HttpPost]
     [Authorize(Roles = SystemRoles.SuperAdmin)]
     public async Task<IActionResult> CreateTenant([FromBody] CreateTenantCommand command, CancellationToken cancellationToken)

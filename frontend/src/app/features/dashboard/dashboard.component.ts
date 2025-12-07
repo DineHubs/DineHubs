@@ -17,7 +17,9 @@ import {
   SalesTrend,
   TopSellingItem,
   OrderStatusCount,
-  OrderHourlyCount
+  OrderHourlyCount,
+  SubscriptionStatusCount,
+  SubscriptionTrend
 } from '../../core/models/dashboard.model';
 import { SalesTrendChartComponent } from '../../shared/components/sales-trend-chart/sales-trend-chart.component';
 import { PieChartComponent } from '../../shared/components/pie-chart/pie-chart.component';
@@ -78,6 +80,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   statusChartData: { label: string; value: number }[] = [];
   topItemsChartData: { label: string; value: number }[] = [];
   hourlyChartData: { label: string; value: number }[] = [];
+  subscriptionStatusData: { label: string; value: number }[] = [];
+  subscriptionTrendData: { label: string; value: number }[] = [];
 
   // User roles
   isManager = false;
@@ -175,8 +179,12 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
 
     // Load charts based on roles
-    if (this.isManager || this.isAdmin || this.isSuperAdmin) {
+    if (this.isManager || this.isAdmin) {
       this.loadManagerCharts(from, to);
+    }
+
+    if (this.isSuperAdmin) {
+      this.loadSuperAdminCharts();
     }
 
     if (this.isKitchen) {
@@ -309,6 +317,48 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
+  private loadSuperAdminCharts(): void {
+    // Subscription status breakdown
+    this.dashboardService.getSubscriptionStatusBreakdown().subscribe({
+      next: (data) => {
+        try {
+          this.subscriptionStatusData = (data || []).map(d => ({
+            label: d.status,
+            value: d.count
+          }));
+        } catch (error: any) {
+          console.error('Error processing subscription status data:', error);
+          this.subscriptionStatusData = [];
+        }
+      },
+      error: (error) => {
+        console.error('Error loading subscription status breakdown:', error);
+        this.subscriptionStatusData = [];
+        this.snackBar.open('Failed to load subscription status chart', 'Close', { duration: 3000 });
+      }
+    });
+
+    // Subscription trend
+    this.dashboardService.getSubscriptionTrend(6).subscribe({
+      next: (data) => {
+        try {
+          this.subscriptionTrendData = (data || []).map(d => ({
+            label: d.month,
+            value: d.count
+          }));
+        } catch (error: any) {
+          console.error('Error processing subscription trend data:', error);
+          this.subscriptionTrendData = [];
+        }
+      },
+      error: (error) => {
+        console.error('Error loading subscription trend:', error);
+        this.subscriptionTrendData = [];
+        this.snackBar.open('Failed to load subscription trend chart', 'Close', { duration: 3000 });
+      }
+    });
+  }
+
   private updateStatCards(): void {
     try {
       if (!this.stats) return;
@@ -375,6 +425,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
           value: this.stats.activeUsersCount.toString(),
           icon: 'people',
           color: '#00796b'
+        }
+      );
+    }
+
+    if (this.isSuperAdmin) {
+      this.statCards.push(
+        {
+          title: 'Active Tenants',
+          value: this.stats.activeTenantsCount.toString(),
+          icon: 'business',
+          color: '#388e3c'
+        },
+        {
+          title: 'New Subscriptions',
+          value: this.stats.newSubscriptionsThisMonth.toString(),
+          icon: 'add_circle',
+          color: '#1976d2'
+        },
+        {
+          title: 'Active Subscriptions',
+          value: this.stats.totalActiveSubscriptions.toString(),
+          icon: 'verified',
+          color: '#7b1fa2'
         }
       );
     }

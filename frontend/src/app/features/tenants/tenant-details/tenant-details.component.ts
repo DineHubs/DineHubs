@@ -11,6 +11,23 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
 import { ApiService } from '../../../core/services/api.service';
 import { Tenant } from '../tenant-list/tenant-list.component';
 
+export interface TenantDetail extends Tenant {
+  branchesCount: number;
+  usersCount: number;
+  subscription?: SubscriptionDetail;
+}
+
+export interface SubscriptionDetail {
+  id: string;
+  status: string;
+  planCode: string;
+  startDate: string;
+  endDate: string;
+  autoRenew: boolean;
+  billingProvider: string;
+  externalSubscriptionId?: string;
+}
+
 export interface TenantUser {
   id: string;
   email: string;
@@ -42,7 +59,7 @@ export class TenantDetailsComponent implements OnInit {
   private snackBar = inject(MatSnackBar);
 
   tenantId: string = '';
-  tenant: Tenant | null = null;
+  tenant: TenantDetail | null = null;
   usersDataSource = new MatTableDataSource<TenantUser>([]);
   usersDisplayedColumns = ['email', 'role', 'branchId', 'isActive'];
   isLoading = false;
@@ -57,22 +74,17 @@ export class TenantDetailsComponent implements OnInit {
   }
 
   loadTenant(): void {
-    // Since we don't have a GET by ID endpoint, we'll load from list
-    // In a real scenario, you'd have GET /api/v1/Tenants/{id}
     this.isLoading = true;
-    this.apiService.get<Tenant[]>('Tenants').subscribe({
-      next: (tenants) => {
-        this.tenant = tenants.find(t => t.id === this.tenantId) || null;
+    this.apiService.get<TenantDetail>(`Tenants/${this.tenantId}`).subscribe({
+      next: (tenant) => {
+        this.tenant = tenant;
         this.isLoading = false;
-        if (!this.tenant) {
-          this.snackBar.open('Tenant not found', 'Close', { duration: 3000 });
-          this.router.navigate(['/tenants']);
-        }
       },
       error: (err) => {
         console.error('Error loading tenant', err);
         this.snackBar.open('Failed to load tenant', 'Close', { duration: 3000 });
         this.isLoading = false;
+        this.router.navigate(['/tenants']);
       }
     });
   }
@@ -106,6 +118,28 @@ export class TenantDetailsComponent implements OnInit {
       'InventoryManager': ''
     };
     return roleColors[role] || '';
+  }
+
+  getSubscriptionStatusColor(status?: string): string {
+    switch (status) {
+      case 'Active':
+        return 'primary';
+      case 'Pending':
+        return 'accent';
+      case 'Expired':
+        return 'warn';
+      case 'Cancelled':
+      case 'Suspended':
+        return '';
+      default:
+        return '';
+    }
+  }
+
+  formatDate(dateString?: string): string {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
   }
 }
 

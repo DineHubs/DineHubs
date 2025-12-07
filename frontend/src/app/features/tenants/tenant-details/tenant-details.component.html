@@ -34,7 +34,85 @@
               {{ tenant.isActive ? 'Active' : 'Inactive' }}
             </mat-chip>
           </div>
+          <div class="info-item">
+            <span class="label">Branches:</span>
+            <span class="value">{{ tenant.branchesCount }}</span>
+          </div>
+          <div class="info-item">
+            <span class="label">Users:</span>
+            <span class="value">{{ tenant.usersCount }}</span>
+          </div>
         </div>
+      </mat-card-content>
+    </mat-card>
+
+    <mat-card class="subscription-card">
+      <mat-card-header>
+        <mat-card-title>
+          <mat-icon>subscriptions</mat-icon>
+          Subscription Details
+        </mat-card-title>
+      </mat-card-header>
+      <mat-card-content>
+        @if (tenant.subscription) {
+          <div class="subscription-info">
+            <div class="info-grid">
+              <div class="info-item">
+                <span class="label">Plan:</span>
+                <mat-chip class="plan-chip" highlighted>{{ tenant.subscription.planCode }}</mat-chip>
+              </div>
+              <div class="info-item">
+                <span class="label">Status:</span>
+                <mat-chip [color]="getSubscriptionStatusColor(tenant.subscription.status)" highlighted>
+                  {{ tenant.subscription.status }}
+                </mat-chip>
+              </div>
+              <div class="info-item">
+                <span class="label">Start Date:</span>
+                <span class="value">{{ formatDate(tenant.subscription.startDate) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">End Date:</span>
+                <span class="value">{{ formatDate(tenant.subscription.endDate) }}</span>
+              </div>
+              <div class="info-item">
+                <span class="label">Auto Renew:</span>
+                <mat-chip [color]="tenant.subscription.autoRenew ? 'primary' : ''" highlighted>
+                  {{ tenant.subscription.autoRenew ? 'Yes' : 'No' }}
+                </mat-chip>
+              </div>
+              <div class="info-item">
+                <span class="label">Billing Provider:</span>
+                <span class="value">{{ tenant.subscription.billingProvider }}</span>
+              </div>
+              @if (tenant.subscription.externalSubscriptionId) {
+                <div class="info-item">
+                  <span class="label">External ID:</span>
+                  <span class="value">{{ tenant.subscription.externalSubscriptionId }}</span>
+                </div>
+              }
+            </div>
+            <div class="subscription-actions">
+              <button mat-raised-button color="primary">
+                <mat-icon>upgrade</mat-icon>
+                Upgrade Plan
+              </button>
+              <button mat-raised-button>
+                <mat-icon>receipt</mat-icon>
+                View Billing History
+              </button>
+            </div>
+          </div>
+        } @else {
+          <div class="no-subscription">
+            <mat-icon>info</mat-icon>
+            <p>No active subscription for this tenant.</p>
+            <button mat-raised-button color="primary">
+              <mat-icon>add</mat-icon>
+              Create Subscription
+            </button>
+          </div>
+        }
       </mat-card-content>
     </mat-card>
 

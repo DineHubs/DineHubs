@@ -13,6 +13,10 @@ export interface DashboardStats {
   // Waiter-specific stats
   myOrdersTodayCount: number;
   myOrdersTodayRevenue: number;
+  // SuperAdmin-specific stats
+  activeTenantsCount: number;
+  newSubscriptionsThisMonth: number;
+  totalActiveSubscriptions: number;
 }
 
 export interface SalesTrend {
@@ -56,5 +60,15 @@ export interface AverageOrderValue {
   date: string;
   averageOrderValue: number;
   orderCount: number;
+}
+
+export interface SubscriptionStatusCount {
+  status: string;
+  count: number;
+}
+
+export interface SubscriptionTrend {
+  month: string;
+  count: number;
 }
 

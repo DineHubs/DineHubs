@@ -207,6 +207,40 @@ public sealed class DashboardService(
                 }
             }
 
+            // SuperAdmin-specific stats (subscription metrics)
+            var activeTenantsCount = 0;
+            var newSubscriptionsThisMonth = 0;
+            var totalActiveSubscriptions = 0;
+            
+            // Check if user is SuperAdmin (tenantId is Guid.Empty for SuperAdmin)
+            if (tenantContext.TenantId == Guid.Empty)
+            {
+                try
+                {
+                    // Total active subscriptions
+                    totalActiveSubscriptions = await dbContext.Subscriptions
+                        .AsNoTracking()
+                        .CountAsync(s => s.Status == SubscriptionStatus.Active, cancellationToken);
+                    
+                    // Active tenants (tenants with active subscriptions)
+                    activeTenantsCount = await dbContext.Subscriptions
+                        .AsNoTracking()
+                        .Where(s => s.Status == SubscriptionStatus.Active)
+                        .Select(s => s.TenantId)
+                        .Distinct()
+                        .CountAsync(cancellationToken);
+                    
+                    // New subscriptions this month
+                    newSubscriptionsThisMonth = await dbContext.Subscriptions
+                        .AsNoTracking()
+                        .CountAsync(s => s.CreatedAt >= thisMonth && s.CreatedAt <= thisMonthEnd, cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    logger.Warning(ex, "Error retrieving SuperAdmin subscription stats, defaulting to 0");
+                }
+            }
+
             logger.Information("Retrieved dashboard stats for tenant {TenantId}, branch {BranchId}", 
                 tenantContext.TenantId, tenantContext.BranchId);
 
@@ -224,7 +258,10 @@ public sealed class DashboardService(
                 InventoryValue = inventoryValue,
                 LowStockItemsCount = lowStockItemsCount,
                 MyOrdersTodayCount = myOrdersTodayCount,
-                MyOrdersTodayRevenue = myOrdersTodayRevenue
+                MyOrdersTodayRevenue = myOrdersTodayRevenue,
+                ActiveTenantsCount = activeTenantsCount,
+                NewSubscriptionsThisMonth = newSubscriptionsThisMonth,
+                TotalActiveSubscriptions = totalActiveSubscriptions
             };
         }
         catch (Exception ex)
@@ -547,6 +584,80 @@ public sealed class DashboardService(
         {
             logger.Error(ex, "Error retrieving average order value trend for tenant {TenantId}, branch {BranchId}", 
                 tenantContext.TenantId, tenantContext.BranchId);
+            throw;
+        }
+    }
+
+    public async Task<IReadOnlyCollection<SubscriptionStatusCountDto>> GetSubscriptionStatusBreakdownAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var results = await dbContext.Subscriptions
+                .AsNoTracking()
+                .GroupBy(s => s.Status)
+                .Select(g => new SubscriptionStatusCountDto
+                {
+                    Status = g.Key.ToString(),
+                    Count = g.Count()
+                })
+                .ToListAsync(cancellationToken);
+
+            logger.Information("Retrieved subscription status breakdown with {Count} statuses", results.Count);
+
+            return results;
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Error retrieving subscription status breakdown");
+            throw;
+        }
+    }
+
+    public async Task<IReadOnlyCollection<SubscriptionTrendDto>> GetSubscriptionTrendAsync(int months, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var startDate = DateTimeOffset.UtcNow.AddMonths(-months).Date;
+            var startDateOffset = new DateTimeOffset(startDate, TimeSpan.Zero);
+
+            var subscriptions = await dbContext.Subscriptions
+                .AsNoTracking()
+                .Where(s => s.CreatedAt >= startDateOffset)
+                .ToListAsync(cancellationToken);
+
+            // Group by month in memory
+            var results = subscriptions
+                .GroupBy(s => new { s.CreatedAt.Year, s.CreatedAt.Month })
+                .Select(g => new SubscriptionTrendDto
+                {
+                    Month = $"{g.Key.Year}-{g.Key.Month:D2}",
+                    Count = g.Count()
+                })
+                .OrderBy(t => t.Month)
+                .ToList();
+
+            // Fill in missing months with 0
+            var allMonths = new List<SubscriptionTrendDto>();
+            for (int i = months - 1; i >= 0; i--)
+            {
+                var monthDate = DateTimeOffset.UtcNow.AddMonths(-i);
+                var monthKey = $"{monthDate.Year}-{monthDate.Month:D2}";
+                var existing = results.FirstOrDefault(r => r.Month == monthKey);
+                
+                allMonths.Add(new SubscriptionTrendDto
+                {
+                    Month = monthKey,
+                    Count = existing?.Count ?? 0
+                });
+            }
+
+            logger.Information("Retrieved subscription trend for last {Months} months", months);
+
+            return allMonths;
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Error retrieving subscription trend");
             throw;
         }
     }

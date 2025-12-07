@@ -9,7 +9,9 @@ import {
   OrderHourlyCount,
   LowStockItem,
   RevenueByDay,
-  AverageOrderValue
+  AverageOrderValue,
+  SubscriptionStatusCount,
+  SubscriptionTrend
 } from '../models/dashboard.model';
 
 @Injectable({
@@ -90,6 +92,15 @@ export class DashboardService {
   getAverageOrderValueTrend(from: Date, to: Date): Observable<AverageOrderValue[]> {
     const endpoint = `Dashboard/average-order-value?from=${from.toISOString()}&to=${to.toISOString()}`;
     return this.apiService.get<AverageOrderValue[]>(endpoint);
+  }
+
+  getSubscriptionStatusBreakdown(): Observable<SubscriptionStatusCount[]> {
+    return this.apiService.get<SubscriptionStatusCount[]>('Dashboard/subscription-status');
+  }
+
+  getSubscriptionTrend(months: number = 6): Observable<SubscriptionTrend[]> {
+    const endpoint = `Dashboard/subscription-trend?months=${months}`;
+    return this.apiService.get<SubscriptionTrend[]>(endpoint);
   }
 }
 

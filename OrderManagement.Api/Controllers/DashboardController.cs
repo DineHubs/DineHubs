@@ -161,5 +161,37 @@ public class DashboardController(
             return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving average order value trend.");
         }
     }
+
+    [HttpGet("subscription-status")]
+    [Authorize(Roles = SystemRoles.SuperAdmin)]
+    public async Task<IActionResult> GetSubscriptionStatusBreakdown(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var breakdown = await dashboardService.GetSubscriptionStatusBreakdownAsync(cancellationToken);
+            return Ok(breakdown);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Error retrieving subscription status breakdown");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving subscription status breakdown.");
+        }
+    }
+
+    [HttpGet("subscription-trend")]
+    [Authorize(Roles = SystemRoles.SuperAdmin)]
+    public async Task<IActionResult> GetSubscriptionTrend([FromQuery] int months = 6, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var trend = await dashboardService.GetSubscriptionTrendAsync(months, cancellationToken);
+            return Ok(trend);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Error retrieving subscription trend");
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving subscription trend.");
+        }
+    }
 }
 

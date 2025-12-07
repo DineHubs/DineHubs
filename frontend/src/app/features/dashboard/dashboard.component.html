@@ -106,7 +106,7 @@
     </mat-grid-list>
 
     <!-- Charts Section -->
-    @if (isManager || isAdmin || isSuperAdmin) {
+    @if (isManager || isAdmin) {
       <div class="charts-section">
         <h2>Analytics</h2>
         
@@ -158,6 +158,37 @@
       </div>
     }
 
+    <!-- SuperAdmin Analytics -->
+    @if (isSuperAdmin) {
+      <div class="charts-section">
+        <h2>Subscription Analytics</h2>
+        
+        <mat-grid-list cols="2" rowHeight="350px" gutterSize="16px" class="charts-grid">
+          <!-- Subscription Status Breakdown -->
+          @if (subscriptionStatusData && subscriptionStatusData.length > 0) {
+            <mat-grid-tile>
+              <mat-card>
+                <mat-card-content>
+                  <app-pie-chart [data]="subscriptionStatusData" title="Subscription Status Breakdown" [chartType]="'pie'"></app-pie-chart>
+                </mat-card-content>
+              </mat-card>
+            </mat-grid-tile>
+          }
+
+          <!-- Subscription Trend -->
+          @if (subscriptionTrendData && subscriptionTrendData.length > 0) {
+            <mat-grid-tile>
+              <mat-card>
+                <mat-card-content>
+                  <app-bar-chart [data]="subscriptionTrendData" title="Subscription Trend (Last 6 Months)" [orientation]="'vertical'" [yAxisLabel]="'New Subscriptions'"></app-bar-chart>
+                </mat-card-content>
+              </mat-card>
+            </mat-grid-tile>
+          }
+        </mat-grid-list>
+      </div>
+    }
+
     <!-- Kitchen Dashboard -->
     @if (isKitchen) {
       <div class="charts-section">
@@ -181,13 +212,23 @@
     <div class="quick-actions">
       <h2>Quick Actions</h2>
       <div class="actions-grid">
+        @if (isSuperAdmin) {
+          <button mat-raised-button color="primary" routerLink="/tenants">
+            <mat-icon>business</mat-icon>
+            <span>Tenant Management</span>
+          </button>
+          <button mat-raised-button routerLink="/tenants">
+            <mat-icon>subscriptions</mat-icon>
+            <span>Subscriptions</span>
+          </button>
+        }
         @if (isManager || isWaiter) {
           <button mat-raised-button color="primary" routerLink="/orders/create">
             <mat-icon>add_shopping_cart</mat-icon>
             <span>New Order</span>
           </button>
         }
-        @if (isManager || isAdmin || isSuperAdmin) {
+        @if (isManager || isAdmin) {
           <button mat-raised-button routerLink="/menu">
             <mat-icon>restaurant_menu</mat-icon>
             <span>Manage Menu</span>
@@ -199,10 +240,12 @@
             <span>Kitchen Display</span>
           </button>
         }
-        <button mat-raised-button routerLink="/tables">
-          <mat-icon>table_restaurant</mat-icon>
-          <span>Table Management</span>
-        </button>
+        @if (!isSuperAdmin) {
+          <button mat-raised-button routerLink="/tables">
+            <mat-icon>table_restaurant</mat-icon>
+            <span>Table Management</span>
+          </button>
+        }
       </div>
     </div>
   }

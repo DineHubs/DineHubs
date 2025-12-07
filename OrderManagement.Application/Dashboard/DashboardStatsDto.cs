@@ -16,5 +16,9 @@ public sealed record DashboardStatsDto
     // Waiter-specific stats
     public int MyOrdersTodayCount { get; init; }
     public decimal MyOrdersTodayRevenue { get; init; }
+    // SuperAdmin-specific stats
+    public int ActiveTenantsCount { get; init; }
+    public int NewSubscriptionsThisMonth { get; init; }
+    public int TotalActiveSubscriptions { get; init; }
 }
 

@@ -22,6 +22,11 @@ export interface Tenant {
   defaultCurrency: string;
   isActive: boolean;
   createdAt: string;
+  subscriptionStatus?: string;
+  subscriptionPlanCode?: string;
+  subscriptionStartDate?: string;
+  subscriptionEndDate?: string;
+  subscriptionAutoRenew?: boolean;
 }
 
 @Component({
@@ -50,7 +55,7 @@ export class TenantListComponent implements OnInit, AfterViewInit {
   private snackBar = inject(MatSnackBar);
 
   dataSource = new MatTableDataSource<Tenant>([]);
-  displayedColumns = ['name', 'code', 'countryCode', 'defaultCurrency', 'isActive', 'actions'];
+  displayedColumns = ['name', 'code', 'subscription', 'countryCode', 'defaultCurrency', 'isActive', 'actions'];
 
   @ViewChild(MatPaginator) paginator!: MatPaginator;
   @ViewChild(MatSort) sort!: MatSort;
@@ -87,6 +92,28 @@ export class TenantListComponent implements OnInit, AfterViewInit {
 
   viewTenant(tenant: Tenant): void {
     this.router.navigate(['/tenants', tenant.id]);
+  }
+
+  getStatusColor(status?: string): string {
+    switch (status) {
+      case 'Active':
+        return 'primary';
+      case 'Pending':
+        return 'accent';
+      case 'Expired':
+        return 'warn';
+      case 'Cancelled':
+      case 'Suspended':
+        return '';
+      default:
+        return '';
+    }
+  }
+
+  formatDate(dateString?: string): string {
+    if (!dateString) return 'N/A';
+    const date = new Date(dateString);
+    return date.toLocaleDateString();
   }
 }
 

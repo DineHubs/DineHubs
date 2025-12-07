@@ -10,5 +10,7 @@ public interface IDashboardService
     Task<IReadOnlyCollection<LowStockItemDto>> GetLowStockItemsAsync(CancellationToken cancellationToken);
     Task<IReadOnlyCollection<RevenueByDayDto>> GetRevenueByDayAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken);
     Task<IReadOnlyCollection<AverageOrderValueDto>> GetAverageOrderValueTrendAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<SubscriptionStatusCountDto>> GetSubscriptionStatusBreakdownAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<SubscriptionTrendDto>> GetSubscriptionTrendAsync(int months, CancellationToken cancellationToken);
 }
 

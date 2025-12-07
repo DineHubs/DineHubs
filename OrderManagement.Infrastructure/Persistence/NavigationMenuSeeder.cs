@@ -64,22 +64,22 @@ public static class NavigationMenuSeeder
         var orders = new NavigationMenuItem(tenantId, "Orders", "shopping_cart", "/orders", null, 2);
         dbContext.NavigationMenuItems.Add(orders);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, orders.Id, new[] { SystemRoles.Waiter, SystemRoles.Manager, SystemRoles.Admin, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, orders.Id, new[] { SystemRoles.Waiter, SystemRoles.Manager, SystemRoles.Admin }, cancellationToken);
 
         var menu = new NavigationMenuItem(tenantId, "Menu Management", "restaurant_menu", "/menu", null, 3);
         dbContext.NavigationMenuItems.Add(menu);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, menu.Id, new[] { SystemRoles.Admin, SystemRoles.Manager, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, menu.Id, new[] { SystemRoles.Admin, SystemRoles.Manager }, cancellationToken);
 
         var kitchen = new NavigationMenuItem(tenantId, "Kitchen", "restaurant", "/kitchen", null, 4);
         dbContext.NavigationMenuItems.Add(kitchen);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, kitchen.Id, new[] { SystemRoles.Kitchen, SystemRoles.Manager, SystemRoles.Admin, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, kitchen.Id, new[] { SystemRoles.Kitchen, SystemRoles.Manager, SystemRoles.Admin }, cancellationToken);
 
         var inventory = new NavigationMenuItem(tenantId, "Inventory", "inventory_2", "/inventory", null, 5);
         dbContext.NavigationMenuItems.Add(inventory);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, inventory.Id, new[] { SystemRoles.InventoryManager, SystemRoles.Admin, SystemRoles.Manager, SystemRoles.SuperAdmin, SystemRoles.Kitchen }, cancellationToken);
+        await AddPermissionsAsync(dbContext, inventory.Id, new[] { SystemRoles.InventoryManager, SystemRoles.Admin, SystemRoles.Manager, SystemRoles.Kitchen }, cancellationToken);
 
         var reports = new NavigationMenuItem(tenantId, "Reports", "assessment", "/reports", null, 6);
         dbContext.NavigationMenuItems.Add(reports);
@@ -110,57 +110,57 @@ public static class NavigationMenuSeeder
         var ordersActive = new NavigationMenuItem(tenantId, "Active Orders", "list", "/orders/active", orders.Id, 1);
         dbContext.NavigationMenuItems.Add(ordersActive);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, ordersActive.Id, new[] { SystemRoles.Waiter, SystemRoles.Manager, SystemRoles.Admin, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, ordersActive.Id, new[] { SystemRoles.Waiter, SystemRoles.Manager, SystemRoles.Admin }, cancellationToken);
 
         var ordersHistory = new NavigationMenuItem(tenantId, "Order History", "history", "/orders/history", orders.Id, 2);
         dbContext.NavigationMenuItems.Add(ordersHistory);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, ordersHistory.Id, new[] { SystemRoles.Waiter, SystemRoles.Manager, SystemRoles.Admin, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, ordersHistory.Id, new[] { SystemRoles.Waiter, SystemRoles.Manager, SystemRoles.Admin }, cancellationToken);
 
         var ordersCreate = new NavigationMenuItem(tenantId, "Create Order", "add_shopping_cart", "/orders/create", orders.Id, 3);
         dbContext.NavigationMenuItems.Add(ordersCreate);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, ordersCreate.Id, new[] { SystemRoles.Waiter, SystemRoles.Manager, SystemRoles.Admin, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, ordersCreate.Id, new[] { SystemRoles.Waiter, SystemRoles.Manager, SystemRoles.Admin }, cancellationToken);
 
         var menuItemsView = new NavigationMenuItem(tenantId, "View Menu Items", "list", "/menu/items", menu.Id, 1);
         dbContext.NavigationMenuItems.Add(menuItemsView);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, menuItemsView.Id, new[] { SystemRoles.Admin, SystemRoles.Manager, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, menuItemsView.Id, new[] { SystemRoles.Admin, SystemRoles.Manager }, cancellationToken);
 
         var menuAdd = new NavigationMenuItem(tenantId, "Add Menu Item", "add", "/menu/add", menu.Id, 2);
         dbContext.NavigationMenuItems.Add(menuAdd);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, menuAdd.Id, new[] { SystemRoles.Admin, SystemRoles.Manager, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, menuAdd.Id, new[] { SystemRoles.Admin, SystemRoles.Manager }, cancellationToken);
 
         var menuCategories = new NavigationMenuItem(tenantId, "Categories", "category", "/menu/categories", menu.Id, 3);
         dbContext.NavigationMenuItems.Add(menuCategories);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, menuCategories.Id, new[] { SystemRoles.Admin, SystemRoles.Manager, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, menuCategories.Id, new[] { SystemRoles.Admin, SystemRoles.Manager }, cancellationToken);
 
         var kitchenQueue = new NavigationMenuItem(tenantId, "Order Queue", "queue", "/kitchen/queue", kitchen.Id, 1);
         dbContext.NavigationMenuItems.Add(kitchenQueue);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, kitchenQueue.Id, new[] { SystemRoles.Kitchen, SystemRoles.Manager, SystemRoles.Admin, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, kitchenQueue.Id, new[] { SystemRoles.Kitchen, SystemRoles.Manager, SystemRoles.Admin }, cancellationToken);
 
         var inventoryOverview = new NavigationMenuItem(tenantId, "Stock Overview", "view_list", "/inventory/overview", inventory.Id, 1);
         dbContext.NavigationMenuItems.Add(inventoryOverview);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, inventoryOverview.Id, new[] { SystemRoles.InventoryManager, SystemRoles.Admin, SystemRoles.Manager, SystemRoles.SuperAdmin, SystemRoles.Kitchen }, cancellationToken);
+        await AddPermissionsAsync(dbContext, inventoryOverview.Id, new[] { SystemRoles.InventoryManager, SystemRoles.Admin, SystemRoles.Manager, SystemRoles.Kitchen }, cancellationToken);
 
         var inventoryAdd = new NavigationMenuItem(tenantId, "Add Stock", "add_box", "/inventory/add", inventory.Id, 2);
         dbContext.NavigationMenuItems.Add(inventoryAdd);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, inventoryAdd.Id, new[] { SystemRoles.InventoryManager, SystemRoles.Admin, SystemRoles.Manager, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, inventoryAdd.Id, new[] { SystemRoles.InventoryManager, SystemRoles.Admin, SystemRoles.Manager }, cancellationToken);
 
         var inventorySuppliers = new NavigationMenuItem(tenantId, "Suppliers", "business", "/inventory/suppliers", inventory.Id, 3);
         dbContext.NavigationMenuItems.Add(inventorySuppliers);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, inventorySuppliers.Id, new[] { SystemRoles.InventoryManager, SystemRoles.Admin, SystemRoles.Manager, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, inventorySuppliers.Id, new[] { SystemRoles.InventoryManager, SystemRoles.Admin, SystemRoles.Manager }, cancellationToken);
 
         var inventoryReports = new NavigationMenuItem(tenantId, "Inventory Reports", "assessment", "/inventory/reports", inventory.Id, 4);
         dbContext.NavigationMenuItems.Add(inventoryReports);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, inventoryReports.Id, new[] { SystemRoles.InventoryManager, SystemRoles.Admin, SystemRoles.Manager, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, inventoryReports.Id, new[] { SystemRoles.InventoryManager, SystemRoles.Admin, SystemRoles.Manager }, cancellationToken);
 
         var reportsSales = new NavigationMenuItem(tenantId, "Sales Reports", "trending_up", "/reports/sales", reports.Id, 1);
         dbContext.NavigationMenuItems.Add(reportsSales);
