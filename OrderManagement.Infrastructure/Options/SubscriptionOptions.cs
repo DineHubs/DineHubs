@@ -14,6 +14,7 @@ public sealed class SubscriptionOptions
         public string DisplayName { get; set; } = string.Empty;
         public decimal MonthlyPrice { get; set; }
         public decimal AnnualPrice { get; set; }
+        public int? DurationDays { get; set; }
         public int MaxBranches { get; set; }
         public int MaxUsers { get; set; }
         public bool IncludesInventory { get; set; }

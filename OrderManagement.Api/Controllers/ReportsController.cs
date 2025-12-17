@@ -30,7 +30,7 @@ public class ReportsController(IReportingService reportingService, ITenantContex
     }
 
     [HttpGet("subscription")]
-    [Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.Admin}")]
+    [Authorize(Roles = SystemRoles.SuperAdmin)]
     public async Task<IActionResult> GetSubscriptionUsage(CancellationToken cancellationToken)
     {
         var result = await reportingService.GetSubscriptionUsageAsync(tenantContext.TenantId, cancellationToken);

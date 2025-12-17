@@ -9,6 +9,7 @@ export enum OrderStatus {
 }
 
 export interface OrderLine {
+  id?: string;
   menuItemId: string;
   name: string;
   price: number;
@@ -36,5 +37,45 @@ export interface Order {
   lines: OrderLine[];
   createdAt: string;
   updatedAt?: string;
+  cancellationReason?: string;
+  paymentTiming?: number;
+}
+
+export interface CancelOrderRequest {
+  reason: string;
+}
+
+export interface UpdateOrderLineRequest {
+  quantity: number;
+}
+
+export interface Payment {
+  id: string;
+  orderId: string;
+  provider: string;
+  status: number;
+  amount: number;
+  currency: string;
+  reference?: string;
+  receiptUrl?: string;
+}
+
+export interface ProcessPaymentRequest {
+  amount: number;
+  provider: string;
+  metadata?: Record<string, string>;
+}
+
+export interface RefundPaymentRequest {
+  amount: number;
+  reason: string;
+}
+
+export interface VoidPaymentRequest {
+  reason: string;
+}
+
+export interface ReprintReceiptRequest {
+  reason: string;
 }
 

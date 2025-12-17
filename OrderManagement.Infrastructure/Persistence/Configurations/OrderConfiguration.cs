@@ -10,6 +10,8 @@ public class OrderConfiguration : IEntityTypeConfiguration<Order>
     {
         builder.ToTable("Orders");
         builder.Property(o => o.OrderNumber).IsRequired().HasMaxLength(100);
+        builder.Property(o => o.PaymentTiming).IsRequired().HasConversion<int>();
+        builder.Property(o => o.CancellationReason).HasMaxLength(500);
         builder.OwnsMany(o => o.Lines, navigationBuilder =>
         {
             navigationBuilder.ToTable("OrderLines");

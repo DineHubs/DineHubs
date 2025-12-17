@@ -1,0 +1,56 @@
+<div class="payment-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>Process Payment</mat-card-title>
+      <mat-card-subtitle>Order Total: RM {{ orderTotal.toFixed(2) }}</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (payment) {
+        <div class="payment-info">
+          <h3>Payment Status</h3>
+          <p><strong>Status:</strong> {{ getPaymentStatusText(payment.status) }}</p>
+          <p><strong>Provider:</strong> {{ payment.provider }}</p>
+          <p><strong>Amount:</strong> RM {{ payment.amount.toFixed(2) }}</p>
+          <p><strong>Reference:</strong> {{ payment.reference || 'N/A' }}</p>
+        </div>
+      } @else {
+        <form class="payment-form">
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Payment Provider</mat-label>
+            <mat-select [(ngModel)]="selectedProvider" name="provider">
+              @for (provider of paymentProviders; track provider) {
+                <mat-option [value]="provider">{{ provider }}</mat-option>
+              }
+            </mat-select>
+          </mat-form-field>
+
+          <mat-form-field appearance="outline" class="full-width">
+            <mat-label>Amount</mat-label>
+            <input matInput type="number" [(ngModel)]="amount" name="amount" [max]="orderTotal" min="0.01" step="0.01" required>
+            <span matPrefix>RM&nbsp;</span>
+            <mat-hint>Maximum: RM {{ orderTotal.toFixed(2) }}</mat-hint>
+          </mat-form-field>
+        </form>
+      }
+    </mat-card-content>
+
+    <mat-card-actions align="end">
+      @if (!payment) {
+        <button mat-raised-button color="primary" (click)="processPayment()" [disabled]="isLoading || amount <= 0">
+          @if (isLoading) {
+            <mat-spinner diameter="20" style="display: inline-block;"></mat-spinner>
+            <span style="margin-left: 8px;">Processing...</span>
+          } @else {
+            <mat-icon>payment</mat-icon>
+            <span>Process Payment</span>
+          }
+        </button>
+      }
+      <button mat-button (click)="router.navigate(['/orders', orderId])">
+        Back to Order
+      </button>
+    </mat-card-actions>
+  </mat-card>
+</div>
+

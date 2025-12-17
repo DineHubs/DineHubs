@@ -40,18 +40,7 @@ export class KitchenDisplayComponent implements OnInit, OnDestroy {
   OrderStatus = OrderStatus; // Expose enum to template
 
   ngOnInit(): void {
-    // Check if user has required role
-    if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/login']);
-      return;
-    }
-
-    if (!this.authService.hasAnyRole([AppRoles.Kitchen, AppRoles.Manager])) {
-      this.snackBar.open('You do not have permission to access this page', 'Close', { duration: 5000 });
-      this.router.navigate(['/dashboard']);
-      return;
-    }
-
+    // Access control handled by route guard
     this.loadOrders();
     // Auto-refresh every 5 seconds
     this.refreshSubscription = interval(5000).subscribe(() => {

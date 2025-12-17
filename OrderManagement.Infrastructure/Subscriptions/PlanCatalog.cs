@@ -29,6 +29,7 @@ public sealed class PlanCatalog(IOptions<SubscriptionOptions> options) : IPlanCa
             option.DisplayName,
             option.MonthlyPrice,
             option.AnnualPrice,
+            option.DurationDays,
             option.MaxBranches,
             option.MaxUsers,
             option.IncludesInventory,

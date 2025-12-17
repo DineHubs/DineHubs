@@ -54,18 +54,7 @@ export class MenuListComponent implements OnInit {
   viewMode: 'grid' | 'list' = 'grid';
 
   ngOnInit(): void {
-    // Check if user has required role
-    if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/login']);
-      return;
-    }
-
-    if (!this.authService.hasAnyRole([AppRoles.Admin, AppRoles.Manager])) {
-      this.snackBar.open('You do not have permission to access this page', 'Close', { duration: 5000 });
-      this.router.navigate(['/dashboard']);
-      return;
-    }
-
+    // Access control handled by route guard
     this.loadMenuItems();
   }
 

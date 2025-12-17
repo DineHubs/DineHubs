@@ -1,9 +1,11 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Serilog;
 using OrderManagement.Api.Contracts.Auth;
 using OrderManagement.Application.Auth;
+using Microsoft.AspNetCore.Hosting;
 
 namespace OrderManagement.Api.Controllers;
 
@@ -12,7 +14,8 @@ namespace OrderManagement.Api.Controllers;
 [Route("api/v{version:apiVersion}/[controller]")]
 public class AuthController(
     IAuthService authService,
-    Serilog.ILogger logger) : ControllerBase
+    Serilog.ILogger logger,
+    IWebHostEnvironment environment) : ControllerBase
 {
     [HttpPost("login")]
     [AllowAnonymous]
@@ -35,10 +38,38 @@ public class AuthController(
         }
     }
 
+    [HttpPost("refresh")]
+    [AllowAnonymous]
+    public async Task<IActionResult> Refresh([FromBody] RefreshTokenRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await authService.RefreshAsync(request.AccessToken, cancellationToken);
+            return Ok(new { AccessToken = result.AccessToken, Roles = result.Roles });
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.Warning("Token refresh failed: {Message}", ex.Message);
+            return Unauthorized(new { Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Unexpected error during token refresh");
+            return StatusCode(StatusCodes.Status500InternalServerError, "Unable to refresh token at this time.");
+        }
+    }
+
     [HttpPost("seed-super-admin")]
     [AllowAnonymous]
     public async Task<IActionResult> SeedSuperAdmin([FromBody] LoginRequest request, CancellationToken cancellationToken)
     {
+        // Restrict to development environment only
+        if (!environment.IsDevelopment())
+        {
+            logger.Warning("Attempt to access seed-super-admin endpoint in non-development environment");
+            return NotFound(); // Return 404 to hide endpoint existence
+        }
+
         try
         {
             await authService.SeedSuperAdminAsync(request.Email, request.Password, cancellationToken);

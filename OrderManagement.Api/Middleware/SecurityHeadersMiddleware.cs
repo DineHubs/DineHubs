@@ -35,8 +35,22 @@ public sealed class SecurityHeadersMiddleware
             "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()");
 
         // Content-Security-Policy: Prevent XSS attacks
+        // Note: For Angular apps, if inline scripts/styles are required, use nonces or hashes instead
         var csp = "default-src 'self'; " +
-                  "script-src 'self' 'unsafe-inline' 'unsafe-eval'; " +
+                  "script-src 'self'; " +
+                  "style-src 'self'; " +
+                  "img-src 'self' data: https:; " +
+                  "font-src 'self' data:; " +
+                  "connect-src 'self'; " +
+                  "frame-ancestors 'none'; " +
+                  "base-uri 'self'; " +
+                  "form-action 'self';";
+        
+        // In development, allow unsafe-inline for easier debugging (remove in production)
+        if (_environment.IsDevelopment())
+        {
+            csp = "default-src 'self'; " +
+                  "script-src 'self' 'unsafe-inline'; " +
                   "style-src 'self' 'unsafe-inline'; " +
                   "img-src 'self' data: https:; " +
                   "font-src 'self' data:; " +
@@ -44,6 +58,8 @@ public sealed class SecurityHeadersMiddleware
                   "frame-ancestors 'none'; " +
                   "base-uri 'self'; " +
                   "form-action 'self';";
+        }
+        
         context.Response.Headers.Append("Content-Security-Policy", csp);
 
         // Strict-Transport-Security (HSTS): Force HTTPS (production only)

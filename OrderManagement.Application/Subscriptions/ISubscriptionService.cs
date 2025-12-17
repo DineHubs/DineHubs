@@ -10,6 +10,8 @@ public interface ISubscriptionService
     Task ActivateAsync(Guid subscriptionId, string provider, string externalId, CancellationToken cancellationToken);
     Task RequestPlanChangeAsync(Guid tenantId, SubscriptionPlanCode newPlan, CancellationToken cancellationToken);
     Task<BillingPayload?> BuildBillingPayloadAsync(Guid tenantId, CancellationToken cancellationToken);
+    Task<IReadOnlyCollection<SubscriptionDto>> GetAllSubscriptionsAsync(CancellationToken cancellationToken);
+    Task<SubscriptionDto?> GetSubscriptionByTenantIdAsync(Guid tenantId, CancellationToken cancellationToken);
 }
 
 

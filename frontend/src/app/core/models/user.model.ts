@@ -17,3 +17,12 @@ export interface LoginResponse {
   roles: string[];
 }
 
+export interface RefreshTokenRequest {
+  accessToken: string;
+}
+
+export interface RefreshTokenResponse {
+  accessToken: string;
+  roles: string[];
+}
+

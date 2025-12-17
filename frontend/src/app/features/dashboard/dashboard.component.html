@@ -39,7 +39,7 @@
               <p>Your dashboard is empty because you haven't created any orders yet.</p>
               <p class="empty-state-hint">Get started by:</p>
               <ul class="empty-state-actions">
-                @if (isManager || isAdmin || isSuperAdmin) {
+                @if (isManager || isAdmin) {
                   <li>
                     <mat-icon>restaurant_menu</mat-icon>
                     <span>Add menu items to your catalog</span>
@@ -71,7 +71,7 @@
                     Create First Order
                   </button>
                 }
-                @if (isManager || isAdmin || isSuperAdmin) {
+                @if (isManager || isAdmin) {
                   <button mat-raised-button routerLink="/menu">
                     <mat-icon>restaurant_menu</mat-icon>
                     Manage Menu

@@ -40,7 +40,23 @@ public class PaymentTransaction : BranchScopedEntity
 
     public void MarkFailed() => Status = PaymentStatus.Failed;
 
-    public void Refund() => Status = PaymentStatus.Refunded;
+    public void Refund(string? reason = null)
+    {
+        if (Status != PaymentStatus.Captured)
+        {
+            throw new InvalidOperationException("Only captured payments can be refunded.");
+        }
+        Status = PaymentStatus.Refunded;
+    }
+
+    public void Void(string? reason = null)
+    {
+        if (Status != PaymentStatus.Authorized && Status != PaymentStatus.Pending)
+        {
+            throw new InvalidOperationException("Only authorized or pending payments can be voided.");
+        }
+        Status = PaymentStatus.Voided;
+    }
 }
 
 

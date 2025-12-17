@@ -62,18 +62,7 @@ export class OrderCreateComponent implements OnInit {
   searchTerm = '';
 
   ngOnInit(): void {
-    // Check if user has required role
-    if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/login']);
-      return;
-    }
-
-    if (!this.authService.hasAnyRole(['SuperAdmin', 'Manager', 'Waiter'])) {
-      this.snackBar.open('You do not have permission to access this page', 'Close', { duration: 5000 });
-      this.router.navigate(['/dashboard']);
-      return;
-    }
-
+    // Access control handled by route guard
     this.loadMenuItems();
   }
 
@@ -166,35 +155,81 @@ export class OrderCreateComponent implements OnInit {
 
     this.isSubmitting = true;
 
-    const orderLines: OrderLine[] = this.cart.map(item => ({
-      menuItemId: item.menuItem.id,
-      name: item.menuItem.name,
-      price: item.menuItem.price,
-      quantity: item.quantity
-    }));
+    try {
+      // Validate and convert menu item IDs to ensure they're valid GUIDs
+      const orderLines: OrderLine[] = this.cart.map(item => {
+        // Ensure menuItemId is a valid GUID string
+        const menuItemId = item.menuItem.id;
+        if (!menuItemId || !this.isValidGuid(menuItemId)) {
+          throw new Error(`Invalid menu item ID: ${menuItemId}`);
+        }
+        
+        return {
+          menuItemId: menuItemId,
+          name: item.menuItem.name,
+          price: item.menuItem.price,
+          quantity: item.quantity
+        };
+      });
 
-    const orderRequest: CreateOrderRequest = {
-      isTakeAway: this.isTakeAway,
-      tableNumber: this.isTakeAway ? undefined : this.tableNumber.trim(),
-      items: orderLines
-    };
+      const orderRequest: CreateOrderRequest = {
+        isTakeAway: this.isTakeAway,
+        tableNumber: this.isTakeAway ? undefined : this.tableNumber.trim(),
+        items: orderLines
+      };
 
-    this.apiService.post<any>('Orders', orderRequest).subscribe({
-      next: (response) => {
-        this.snackBar.open('Order created successfully!', 'Close', { duration: 3000 });
-        this.router.navigate(['/orders']);
-      },
-      error: (error) => {
-        console.error('Error creating order:', error);
-        const errorMessage = error.error?.message || 'Failed to create order';
-        this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
-        this.isSubmitting = false;
-      }
-    });
+      this.apiService.post<any>('Orders', orderRequest).subscribe({
+        next: (response) => {
+          this.snackBar.open('Order created successfully!', 'Close', { duration: 3000 });
+          this.router.navigate(['/orders']);
+        },
+        error: (error) => {
+          console.error('Error creating order:', error);
+          // Extract error message from various possible locations
+          let errorMessage = 'Failed to create order';
+          if (error.error) {
+            if (error.error.message) {
+              errorMessage = error.error.message;
+            } else if (error.error.errors && typeof error.error.errors === 'object') {
+              // FluentValidation/ModelState errors - can be array or object
+              const errorValues = Object.values(error.error.errors);
+              const validationErrors: string[] = [];
+              errorValues.forEach(err => {
+                if (Array.isArray(err)) {
+                  validationErrors.push(...err);
+                } else if (typeof err === 'string') {
+                  validationErrors.push(err);
+                } else if (err && typeof err === 'object' && 'message' in err) {
+                  validationErrors.push((err as any).message);
+                }
+              });
+              errorMessage = validationErrors.length > 0 
+                ? validationErrors.join(', ') 
+                : errorMessage;
+            } else if (error.error.details) {
+              errorMessage = error.error.details;
+            } else if (typeof error.error === 'string') {
+              errorMessage = error.error;
+            }
+          }
+          this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+          this.isSubmitting = false;
+        }
+      });
+    } catch (error: any) {
+      console.error('Error preparing order:', error);
+      this.snackBar.open(error.message || 'Failed to prepare order', 'Close', { duration: 5000 });
+      this.isSubmitting = false;
+    }
   }
 
   clearCart(): void {
     this.cart = [];
+  }
+
+  private isValidGuid(value: string): boolean {
+    const guidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    return guidRegex.test(value);
   }
 }
 

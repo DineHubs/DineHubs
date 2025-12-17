@@ -1,0 +1,153 @@
+<div class="subscriptions-container">
+  <mat-card>
+    <mat-card-header>
+      <mat-card-title>
+        <mat-icon>card_membership</mat-icon>
+        Subscription Management
+      </mat-card-title>
+      <mat-card-subtitle>Manage all tenant subscriptions (SuperAdmin only)</mat-card-subtitle>
+    </mat-card-header>
+
+    <mat-card-content>
+      @if (hasError && !isLoading) {
+        <div class="error-message">
+          <mat-icon color="warn">error</mat-icon>
+          <p>{{ errorMessage }}</p>
+        </div>
+      } @else if (isLoading) {
+        <div class="loading-container">
+          <mat-spinner diameter="50"></mat-spinner>
+          <p>Loading subscriptions...</p>
+        </div>
+      } @else {
+        <mat-tab-group>
+          <mat-tab label="All Subscriptions">
+            <div class="table-container">
+              <table mat-table [dataSource]="subscriptions" class="subscriptions-table">
+                <ng-container matColumnDef="tenantName">
+                  <th mat-header-cell *matHeaderCellDef> Tenant </th>
+                  <td mat-cell *matCellDef="let subscription">
+                    <strong>{{ subscription.tenantName }}</strong>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="plan">
+                  <th mat-header-cell *matHeaderCellDef> Plan </th>
+                  <td mat-cell *matCellDef="let subscription">
+                    <mat-chip highlighted>{{ subscription.planDisplayName }}</mat-chip>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="status">
+                  <th mat-header-cell *matHeaderCellDef> Status </th>
+                  <td mat-cell *matCellDef="let subscription">
+                    <mat-chip [color]="getStatusColor(subscription.status)" highlighted>
+                      {{ subscription.status }}
+                    </mat-chip>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="startDate">
+                  <th mat-header-cell *matHeaderCellDef> Start Date </th>
+                  <td mat-cell *matCellDef="let subscription">
+                    {{ formatDate(subscription.startDate) }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="endDate">
+                  <th mat-header-cell *matHeaderCellDef> End Date </th>
+                  <td mat-cell *matCellDef="let subscription">
+                    {{ formatDate(subscription.endDate) }}
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="autoRenew">
+                  <th mat-header-cell *matHeaderCellDef> Auto Renew </th>
+                  <td mat-cell *matCellDef="let subscription">
+                    <mat-chip [color]="subscription.autoRenew ? 'primary' : ''" highlighted>
+                      {{ subscription.autoRenew ? 'Yes' : 'No' }}
+                    </mat-chip>
+                  </td>
+                </ng-container>
+
+                <ng-container matColumnDef="actions">
+                  <th mat-header-cell *matHeaderCellDef> Actions </th>
+                  <td mat-cell *matCellDef="let subscription">
+                    <button mat-icon-button (click)="viewTenant(subscription.tenantId)" matTooltip="View Tenant">
+                      <mat-icon>visibility</mat-icon>
+                    </button>
+                    <button mat-icon-button (click)="upgradePlan(subscription.tenantId)" matTooltip="Upgrade Plan">
+                      <mat-icon>upgrade</mat-icon>
+                    </button>
+                  </td>
+                </ng-container>
+
+                <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
+                <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
+
+                <tr class="mat-row" *matNoDataRow>
+                  <td class="mat-cell" [attr.colspan]="displayedColumns.length">
+                    <div class="no-data">
+                      <mat-icon>info</mat-icon>
+                      <p>No subscriptions found</p>
+                    </div>
+                  </td>
+                </tr>
+              </table>
+            </div>
+          </mat-tab>
+
+          <mat-tab label="Subscription Plans">
+            <div class="plans-container">
+              @for (plan of plans; track plan.code) {
+                <mat-card class="plan-card">
+                  <mat-card-header>
+                    <mat-card-title>{{ plan.displayName }}</mat-card-title>
+                    <mat-card-subtitle>{{ plan.code }}</mat-card-subtitle>
+                  </mat-card-header>
+                  <mat-card-content>
+                    <div class="plan-details">
+                      <div class="plan-feature">
+                        <mat-icon>store</mat-icon>
+                        <span>Max Branches: {{ plan.maxBranches === 0 ? 'Unlimited' : plan.maxBranches }}</span>
+                      </div>
+                      <div class="plan-feature">
+                        <mat-icon>people</mat-icon>
+                        <span>Max Users: {{ plan.maxUsers === 0 ? 'Unlimited' : plan.maxUsers }}</span>
+                      </div>
+                      @if (plan.includesInventory) {
+                        <div class="plan-feature">
+                          <mat-icon color="primary">check_circle</mat-icon>
+                          <span>Inventory Management</span>
+                        </div>
+                      }
+                      @if (plan.includesAdvancedReporting) {
+                        <div class="plan-feature">
+                          <mat-icon color="primary">check_circle</mat-icon>
+                          <span>Advanced Reporting</span>
+                        </div>
+                      }
+                      @if (plan.includesWhatsAppBilling) {
+                        <div class="plan-feature">
+                          <mat-icon color="primary">check_circle</mat-icon>
+                          <span>WhatsApp Billing</span>
+                        </div>
+                      }
+                      @if (plan.durationDays) {
+                        <div class="plan-feature">
+                          <mat-icon>schedule</mat-icon>
+                          <span>Duration: {{ plan.durationDays }} days</span>
+                        </div>
+                      }
+                    </div>
+                  </mat-card-content>
+                </mat-card>
+              }
+            </div>
+          </mat-tab>
+        </mat-tab-group>
+      }
+    </mat-card-content>
+  </mat-card>
+</div>
+

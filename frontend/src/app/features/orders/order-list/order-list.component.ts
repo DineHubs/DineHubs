@@ -43,18 +43,7 @@ export class OrderListComponent implements OnInit {
   displayedColumns = ['orderNumber', 'tableNumber', 'status', 'total', 'createdAt', 'actions'];
 
   ngOnInit(): void {
-    // Check if user has required role
-    if (!this.authService.isAuthenticated()) {
-      this.router.navigate(['/login']);
-      return;
-    }
-
-    if (!this.authService.hasAnyRole([AppRoles.Manager, AppRoles.Waiter])) {
-      this.snackBar.open('You do not have permission to access this page', 'Close', { duration: 5000 });
-      this.router.navigate(['/dashboard']);
-      return;
-    }
-
+    // Access control handled by route guard
     this.loadOrders();
     // Refresh when navigating back to this page
     this.router.events.pipe(

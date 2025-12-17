@@ -5,6 +5,9 @@ using OrderManagement.Application.Auth.Models;
 using OrderManagement.Application.Abstractions.Notifications;
 using OrderManagement.Domain.Identity;
 using OrderManagement.Identity.Entities;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using Microsoft.IdentityModel.Tokens;
 
 namespace OrderManagement.Infrastructure.Identity;
 
@@ -47,6 +50,69 @@ public sealed class AuthService(
         {
             logger.Error(ex, "Failed to log in user {Email}", email);
             throw new InvalidOperationException("Unable to process login at this time.");
+        }
+    }
+
+    public async Task<LoginResult> RefreshAsync(string accessToken, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Parse token to extract user info (even if expired)
+            var tokenHandler = new JwtSecurityTokenHandler();
+            JwtSecurityToken jwtToken;
+            
+            try
+            {
+                jwtToken = tokenHandler.ReadJwtToken(accessToken);
+            }
+            catch (Exception ex)
+            {
+                logger.Warning("Token refresh failed: invalid token format - {Error}", ex.Message);
+                throw new InvalidOperationException("Invalid token.");
+            }
+            
+            var userIdClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Sub || c.Type == ClaimTypes.NameIdentifier);
+            if (userIdClaim == null || !Guid.TryParse(userIdClaim.Value, out var userId))
+            {
+                logger.Warning("Invalid token: missing or invalid user ID");
+                throw new InvalidOperationException("Invalid token.");
+            }
+
+            // Verify user still exists and is valid
+            var user = await userManager.FindByIdAsync(userId.ToString());
+            if (user is null)
+            {
+                logger.Warning("Token refresh attempted for non-existent user: {UserId}", userId);
+                throw new InvalidOperationException("Invalid token.");
+            }
+
+            // Check if user is locked out
+            if (await userManager.IsLockedOutAsync(user))
+            {
+                logger.Warning("Token refresh attempted for locked out user: {UserId}", userId);
+                throw new InvalidOperationException("Account is locked.");
+            }
+
+            // Generate new token with current user data
+            var roles = await userManager.GetRolesAsync(user);
+            var newAccessToken = tokenGenerator.GenerateAccessToken(user.Id, user.Email ?? string.Empty, user.TenantId, user.BranchId, roles);
+            
+            logger.Information("Token refreshed successfully for user {Email}", user.Email);
+            return new LoginResult(newAccessToken, roles.ToList());
+        }
+        catch (SecurityTokenException ex)
+        {
+            logger.Warning("Token refresh failed: invalid token format - {Error}", ex.Message);
+            throw new InvalidOperationException("Invalid token.");
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Failed to refresh token");
+            throw new InvalidOperationException("Unable to refresh token at this time.");
         }
     }
 

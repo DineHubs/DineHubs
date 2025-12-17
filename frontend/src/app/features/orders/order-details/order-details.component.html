@@ -3,11 +3,105 @@
     <mat-icon>arrow_back</mat-icon>
   </button>
   
-  @if (order) {
+  @if (!order) {
+    <div class="loading-container">
+      <mat-spinner></mat-spinner>
+      <p>Loading order details...</p>
+    </div>
+  } @else {
     <mat-card>
-      <h2>Order {{ order.orderNumber }}</h2>
-      <p>Status: {{ getStatusText(order.status) }}</p>
-      <p>Total: RM {{ order.total.toFixed(2) }}</p>
+      <mat-card-header>
+        <mat-card-title>Order {{ order.orderNumber }}</mat-card-title>
+        <mat-card-subtitle>
+          {{ order.isTakeAway ? 'Take Away' : `Table ${order.tableNumber}` }}
+        </mat-card-subtitle>
+      </mat-card-header>
+      
+      <mat-card-content>
+        <div class="order-info">
+          <p>
+            <strong>Status:</strong> 
+            <mat-chip [color]="getStatusColor(order.status)">{{ getStatusText(order.status) }}</mat-chip>
+          </p>
+          <p><strong>Subtotal:</strong> RM {{ order.subtotal.toFixed(2) }}</p>
+          <p><strong>Tax:</strong> RM {{ order.tax.toFixed(2) }}</p>
+          <p><strong>Service Charge:</strong> RM {{ order.serviceCharge.toFixed(2) }}</p>
+          <p><strong>Total:</strong> RM {{ order.total.toFixed(2) }}</p>
+          @if (order.cancellationReason) {
+            <p><strong>Cancellation Reason:</strong> {{ order.cancellationReason }}</p>
+          }
+        </div>
+
+        <div class="order-lines">
+          <h3>Order Items</h3>
+          <table class="order-items-table">
+            <thead>
+              <tr>
+                <th>Item</th>
+                <th>Price</th>
+                <th>Quantity</th>
+                <th>Total</th>
+                @if (canModifyLines()) {
+                  <th>Actions</th>
+                }
+              </tr>
+            </thead>
+            <tbody>
+              @for (line of order.lines; track line.menuItemId) {
+                <tr>
+                  <td>{{ line.name }}</td>
+                  <td>RM {{ line.price.toFixed(2) }}</td>
+                  <td>
+                    @if (canModifyLines()) {
+                      <input 
+                        type="number" 
+                        [value]="line.quantity" 
+                        min="1"
+                        (change)="updateLineQuantity(line.id || line.menuItemId, +$any($event.target).value)"
+                        style="width: 60px;">
+                    } @else {
+                      {{ line.quantity }}
+                    }
+                  </td>
+                  <td>RM {{ (line.price * line.quantity).toFixed(2) }}</td>
+                  @if (canModifyLines()) {
+                    <td>
+                      <button mat-icon-button color="warn" (click)="removeLine(line.id || line.menuItemId)" title="Remove item">
+                        <mat-icon>delete</mat-icon>
+                      </button>
+                    </td>
+                  }
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      </mat-card-content>
+
+      <mat-card-actions>
+        @if (canCancel()) {
+          <button mat-raised-button color="warn" (click)="cancelOrder()">
+            <mat-icon>cancel</mat-icon>
+            Cancel Order
+          </button>
+        }
+        @if (!payment && order.status !== OrderStatus.Paid && order.status !== OrderStatus.Cancelled) {
+          <button mat-raised-button color="primary" [routerLink]="['/orders', order.id, 'payment']">
+            <mat-icon>payment</mat-icon>
+            Process Payment
+          </button>
+        }
+        @if (receiptUrl) {
+          <button mat-raised-button color="primary" (click)="viewReceipt()">
+            <mat-icon>receipt</mat-icon>
+            View Receipt
+          </button>
+          <button mat-raised-button (click)="reprintReceipt()">
+            <mat-icon>print</mat-icon>
+            Reprint Receipt
+          </button>
+        }
+      </mat-card-actions>
     </mat-card>
   }
 </div>

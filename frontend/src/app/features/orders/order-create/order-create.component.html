@@ -37,7 +37,7 @@
           <!-- Menu Items Grid -->
           <div *ngIf="!isLoading" class="menu-grid">
             <mat-card *ngFor="let item of filteredItems" class="menu-item-card" (click)="addToCart(item)">
-              <div class="menu-item-image" [style.background-image]="'url(' + (item.imageUrl || '/assets/default-food.jpg') + ')'"></div>
+              <div class="menu-item-image" [style.background-image]="'url(' + (item.imageUrl || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y1ZjVmNSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBmb250LWZhbWlseT0iQXJpYWwiIGZvbnQtc2l6ZT0iMTQiIGZpbGw9IiM5OTkiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5ObyBJbWFnZTwvdGV4dD48L3N2Zz4=') + ')'"></div>
               <mat-card-content>
                 <h3>{{ item.name }}</h3>
                 <p class="category">{{ item.category }}</p>

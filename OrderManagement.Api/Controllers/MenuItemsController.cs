@@ -1,13 +1,11 @@
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using Serilog;
 using OrderManagement.Api.Contracts.MenuItems;
-using OrderManagement.Application.Abstractions;
-using OrderManagement.Domain.Entities;
+using OrderManagement.Application.MenuItems;
+using OrderManagement.Application.MenuItems.Models;
 using OrderManagement.Domain.Identity;
-using OrderManagement.Infrastructure.Persistence;
 
 namespace OrderManagement.Api.Controllers;
 
@@ -15,8 +13,7 @@ namespace OrderManagement.Api.Controllers;
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/[controller]")]
 public class MenuItemsController(
-    OrderManagementDbContext dbContext,
-    ITenantContext tenantContext,
+    IMenuItemService menuItemService,
     Serilog.ILogger logger) : ControllerBase
 {
     [HttpGet]
@@ -25,31 +22,13 @@ public class MenuItemsController(
     {
         try
         {
-            var query = dbContext.MenuItems
-                .AsNoTracking()
-                .Where(mi => mi.TenantId == tenantContext.TenantId);
-
-            if (branchId.HasValue)
-            {
-                query = query.Where(mi => mi.BranchId == branchId.Value);
-            }
-            else if (tenantContext.BranchId.HasValue)
-            {
-                query = query.Where(mi => mi.BranchId == tenantContext.BranchId.Value);
-            }
-
-            var items = await query
-                .Select(mi => new MenuItemResponse(mi.Id, mi.BranchId, mi.Name, mi.Category, mi.Price, mi.IsAvailable, mi.ImageUrl))
-                .ToListAsync(cancellationToken);
-
-            logger.Information("Retrieved {Count} menu items for tenant {TenantId}, branch {BranchId}", 
-                items.Count, tenantContext.TenantId, branchId ?? tenantContext.BranchId);
-            return Ok(items);
+            var items = await menuItemService.GetMenuItemsAsync(branchId, cancellationToken);
+            var response = items.Select(i => new MenuItemResponse(i.Id, i.BranchId, i.Name, i.Category, i.Price, i.IsAvailable, i.ImageUrl));
+            return Ok(response);
         }
         catch (Exception ex)
         {
-            logger.Error(ex, "Error retrieving menu items for tenant {TenantId}, branch {BranchId}", 
-                tenantContext.TenantId, branchId ?? tenantContext.BranchId);
+            logger.Error(ex, "Error retrieving menu items");
             return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving menu items.");
         }
     }
@@ -60,13 +39,9 @@ public class MenuItemsController(
     {
         try
         {
-            var menuItem = await dbContext.MenuItems
-                .AsNoTracking()
-                .FirstOrDefaultAsync(mi => mi.Id == id && mi.TenantId == tenantContext.TenantId, cancellationToken);
-
+            var menuItem = await menuItemService.GetMenuItemByIdAsync(id, cancellationToken);
             if (menuItem is null)
             {
-                logger.Warning("Menu item {MenuItemId} not found for tenant {TenantId}", id, tenantContext.TenantId);
                 return NotFound();
             }
 
@@ -74,7 +49,7 @@ public class MenuItemsController(
         }
         catch (Exception ex)
         {
-            logger.Error(ex, "Error retrieving menu item {MenuItemId} for tenant {TenantId}", id, tenantContext.TenantId);
+            logger.Error(ex, "Error retrieving menu item {MenuItemId}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while retrieving the menu item.");
         }
     }
@@ -85,33 +60,19 @@ public class MenuItemsController(
     {
         try
         {
-            var branch = await dbContext.Branches
-                .FirstOrDefaultAsync(b => b.Id == request.BranchId && b.TenantId == tenantContext.TenantId, cancellationToken);
-
-            if (branch is null)
-            {
-                logger.Warning("Invalid branch {BranchId} for tenant {TenantId} when creating menu item", request.BranchId, tenantContext.TenantId);
-                return BadRequest("Invalid branch for current tenant.");
-            }
-
-            var menuItem = new MenuItem(tenantContext.TenantId, request.BranchId, request.Name, request.Category, request.Price, request.ImageUrl);
-            if (!request.IsAvailable)
-            {
-                menuItem.ToggleAvailability(false);
-            }
-
-            dbContext.MenuItems.Add(menuItem);
-            await dbContext.SaveChangesAsync(cancellationToken);
-            logger.Information("Created menu item {Name} (Id: {MenuItemId}) for tenant {TenantId} branch {BranchId}", 
-                menuItem.Name, menuItem.Id, tenantContext.TenantId, menuItem.BranchId);
-
+            var dto = new CreateMenuItemDto(request.BranchId, request.Name, request.Category, request.Price, request.IsAvailable, request.ImageUrl);
+            var menuItem = await menuItemService.CreateMenuItemAsync(dto, cancellationToken);
             var response = new MenuItemResponse(menuItem.Id, menuItem.BranchId, menuItem.Name, menuItem.Category, menuItem.Price, menuItem.IsAvailable, menuItem.ImageUrl);
             return CreatedAtAction(nameof(GetMenuItem), new { id = menuItem.Id }, response);
         }
+        catch (InvalidOperationException ex)
+        {
+            logger.Warning("Error creating menu item: {Message}", ex.Message);
+            return BadRequest(new { Message = ex.Message });
+        }
         catch (Exception ex)
         {
-            logger.Error(ex, "Error creating menu item {Name} for tenant {TenantId} branch {BranchId}", 
-                request.Name, tenantContext.TenantId, request.BranchId);
+            logger.Error(ex, "Error creating menu item");
             return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating the menu item.");
         }
     }
@@ -122,25 +83,18 @@ public class MenuItemsController(
     {
         try
         {
-            var menuItem = await dbContext.MenuItems.FirstOrDefaultAsync(mi => mi.Id == id && mi.TenantId == tenantContext.TenantId, cancellationToken);
-            if (menuItem is null)
-            {
-                logger.Warning("Menu item {MenuItemId} not found for tenant {TenantId} when updating", id, tenantContext.TenantId);
-                return NotFound();
-            }
-
-            menuItem.UpdateDetails(request.Name, request.Category);
-            menuItem.UpdatePrice(request.Price);
-            menuItem.ToggleAvailability(request.IsAvailable);
-            menuItem.UpdateImageUrl(request.ImageUrl);
-
-            await dbContext.SaveChangesAsync(cancellationToken);
-            logger.Information("Updated menu item {MenuItemId} ({Name}) for tenant {TenantId}", id, request.Name, tenantContext.TenantId);
+            var dto = new UpdateMenuItemDto(request.Name, request.Category, request.Price, request.IsAvailable, request.ImageUrl);
+            await menuItemService.UpdateMenuItemAsync(id, dto, cancellationToken);
             return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.Warning("Error updating menu item {MenuItemId}: {Message}", id, ex.Message);
+            return NotFound();
         }
         catch (Exception ex)
         {
-            logger.Error(ex, "Error updating menu item {MenuItemId} for tenant {TenantId}", id, tenantContext.TenantId);
+            logger.Error(ex, "Error updating menu item {MenuItemId}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while updating the menu item.");
         }
     }
@@ -151,22 +105,17 @@ public class MenuItemsController(
     {
         try
         {
-            var menuItem = await dbContext.MenuItems.FirstOrDefaultAsync(mi => mi.Id == id && mi.TenantId == tenantContext.TenantId, cancellationToken);
-            if (menuItem is null)
-            {
-                logger.Warning("Menu item {MenuItemId} not found for tenant {TenantId} when deleting", id, tenantContext.TenantId);
-                return NotFound();
-            }
-
-            dbContext.MenuItems.Remove(menuItem);
-            await dbContext.SaveChangesAsync(cancellationToken);
-            logger.Information("Deleted menu item {MenuItemId} ({Name}) for tenant {TenantId}", id, menuItem.Name, tenantContext.TenantId);
-
+            await menuItemService.DeleteMenuItemAsync(id, cancellationToken);
             return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            logger.Warning("Error deleting menu item {MenuItemId}: {Message}", id, ex.Message);
+            return NotFound();
         }
         catch (Exception ex)
         {
-            logger.Error(ex, "Error deleting menu item {MenuItemId} for tenant {TenantId}", id, tenantContext.TenantId);
+            logger.Error(ex, "Error deleting menu item {MenuItemId}", id);
             return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while deleting the menu item.");
         }
     }

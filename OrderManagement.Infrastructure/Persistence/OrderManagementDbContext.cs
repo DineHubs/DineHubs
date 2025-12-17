@@ -36,6 +36,9 @@ public class OrderManagementDbContext(
     public DbSet<NavigationMenuItem> NavigationMenuItems => Set<NavigationMenuItem>();
     public DbSet<MenuPermission> MenuPermissions => Set<MenuPermission>();
     public DbSet<EventLog> EventLogs => Set<EventLog>();
+    public DbSet<ReceiptPrint> ReceiptPrints => Set<ReceiptPrint>();
+    public DbSet<OrderMetrics> OrderMetrics => Set<OrderMetrics>();
+    public DbSet<OrderException> OrderExceptions => Set<OrderException>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

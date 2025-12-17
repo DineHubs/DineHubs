@@ -18,6 +18,7 @@ public class DashboardController(
     Serilog.ILogger logger) : ControllerBase
 {
     [HttpGet("stats")]
+    [Authorize(Roles = $"{SystemRoles.SuperAdmin},{SystemRoles.Manager},{SystemRoles.Waiter}")]
     public async Task<IActionResult> GetStats([FromQuery] DateTimeOffset? from, [FromQuery] DateTimeOffset? to, CancellationToken cancellationToken)
     {
         try
@@ -37,7 +38,6 @@ public class DashboardController(
     }
 
     [HttpGet("sales-trend")]
-    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Admin},{SystemRoles.Waiter},{SystemRoles.Kitchen},{SystemRoles.InventoryManager}")]
     public async Task<IActionResult> GetSalesTrend([FromQuery] DateTimeOffset from, [FromQuery] DateTimeOffset to, CancellationToken cancellationToken)
     {
         try
@@ -54,7 +54,6 @@ public class DashboardController(
     }
 
     [HttpGet("top-items")]
-    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Admin}")]
     public async Task<IActionResult> GetTopItems(CancellationToken cancellationToken, [FromQuery] int count = 10, [FromQuery] DateTimeOffset? from = null, [FromQuery] DateTimeOffset? to = null)
     {
         try
@@ -74,7 +73,6 @@ public class DashboardController(
     }
 
     [HttpGet("orders-by-status")]
-    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Admin},{SystemRoles.Kitchen}")]
     public async Task<IActionResult> GetOrdersByStatus(CancellationToken cancellationToken, [FromQuery] DateTimeOffset? from = null, [FromQuery] DateTimeOffset? to = null)
     {
         try
@@ -94,7 +92,6 @@ public class DashboardController(
     }
 
     [HttpGet("orders-by-hour")]
-    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Admin}")]
     public async Task<IActionResult> GetOrdersByHour(CancellationToken cancellationToken, [FromQuery] DateTimeOffset? date = null)
     {
         try
@@ -113,7 +110,6 @@ public class DashboardController(
     }
 
     [HttpGet("low-stock")]
-    [Authorize(Roles = $"{SystemRoles.Admin},{SystemRoles.InventoryManager},{SystemRoles.Manager}")]
     public async Task<IActionResult> GetLowStockItems(CancellationToken cancellationToken)
     {
         try
@@ -129,7 +125,6 @@ public class DashboardController(
     }
 
     [HttpGet("revenue-by-day")]
-    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Admin}")]
     public async Task<IActionResult> GetRevenueByDay([FromQuery] DateTimeOffset from, [FromQuery] DateTimeOffset to, CancellationToken cancellationToken)
     {
         try
@@ -146,7 +141,6 @@ public class DashboardController(
     }
 
     [HttpGet("average-order-value")]
-    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Admin}")]
     public async Task<IActionResult> GetAverageOrderValueTrend([FromQuery] DateTimeOffset from, [FromQuery] DateTimeOffset to, CancellationToken cancellationToken)
     {
         try
@@ -163,7 +157,6 @@ public class DashboardController(
     }
 
     [HttpGet("subscription-status")]
-    [Authorize(Roles = SystemRoles.SuperAdmin)]
     public async Task<IActionResult> GetSubscriptionStatusBreakdown(CancellationToken cancellationToken)
     {
         try
@@ -179,7 +172,6 @@ public class DashboardController(
     }
 
     [HttpGet("subscription-trend")]
-    [Authorize(Roles = SystemRoles.SuperAdmin)]
     public async Task<IActionResult> GetSubscriptionTrend([FromQuery] int months = 6, CancellationToken cancellationToken = default)
     {
         try

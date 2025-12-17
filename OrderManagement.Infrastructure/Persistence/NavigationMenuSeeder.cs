@@ -59,7 +59,7 @@ public static class NavigationMenuSeeder
         var dashboard = new NavigationMenuItem(tenantId, "Dashboard", "dashboard", "/dashboard", null, 1);
         dbContext.NavigationMenuItems.Add(dashboard);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, dashboard.Id, SystemRoles.All.ToArray(), cancellationToken);
+        await AddPermissionsAsync(dbContext, dashboard.Id, new[] { SystemRoles.SuperAdmin }, cancellationToken);
 
         var orders = new NavigationMenuItem(tenantId, "Orders", "shopping_cart", "/orders", null, 2);
         dbContext.NavigationMenuItems.Add(orders);
@@ -89,7 +89,7 @@ public static class NavigationMenuSeeder
         var subscriptions = new NavigationMenuItem(tenantId, "Subscriptions", "card_membership", "/subscriptions", null, 7);
         dbContext.NavigationMenuItems.Add(subscriptions);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, subscriptions.Id, new[] { SystemRoles.Admin, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, subscriptions.Id, new[] { SystemRoles.SuperAdmin }, cancellationToken);
 
         var tenants = new NavigationMenuItem(tenantId, "Tenant Management", "business", "/tenants", null, 8);
         dbContext.NavigationMenuItems.Add(tenants);
@@ -185,17 +185,17 @@ public static class NavigationMenuSeeder
         var subscriptionsPlans = new NavigationMenuItem(tenantId, "Subscription Plans", "list", "/subscriptions/plans", subscriptions.Id, 1);
         dbContext.NavigationMenuItems.Add(subscriptionsPlans);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, subscriptionsPlans.Id, new[] { SystemRoles.Admin, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, subscriptionsPlans.Id, new[] { SystemRoles.SuperAdmin }, cancellationToken);
 
         var subscriptionsUsage = new NavigationMenuItem(tenantId, "Usage Tracking", "analytics", "/subscriptions/usage", subscriptions.Id, 2);
         dbContext.NavigationMenuItems.Add(subscriptionsUsage);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, subscriptionsUsage.Id, new[] { SystemRoles.Admin, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, subscriptionsUsage.Id, new[] { SystemRoles.SuperAdmin }, cancellationToken);
 
         var subscriptionsBilling = new NavigationMenuItem(tenantId, "Billing History", "receipt", "/subscriptions/billing", subscriptions.Id, 3);
         dbContext.NavigationMenuItems.Add(subscriptionsBilling);
         await dbContext.SaveChangesAsync(cancellationToken);
-        await AddPermissionsAsync(dbContext, subscriptionsBilling.Id, new[] { SystemRoles.Admin, SystemRoles.SuperAdmin }, cancellationToken);
+        await AddPermissionsAsync(dbContext, subscriptionsBilling.Id, new[] { SystemRoles.SuperAdmin }, cancellationToken);
 
         var tenantsList = new NavigationMenuItem(tenantId, "All Tenants", "list", "/tenants", tenants.Id, 1);
         dbContext.NavigationMenuItems.Add(tenantsList);

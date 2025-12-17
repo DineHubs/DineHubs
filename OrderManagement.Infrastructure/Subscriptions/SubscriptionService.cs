@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Serilog;
 using OrderManagement.Application.Abstractions.Billing;
 using OrderManagement.Application.Subscriptions;
 using OrderManagement.Application.Subscriptions.Models;
@@ -10,7 +11,8 @@ namespace OrderManagement.Infrastructure.Subscriptions;
 
 public sealed class SubscriptionService(
     OrderManagementDbContext dbContext,
-    IPlanCatalog planCatalog) : ISubscriptionService
+    IPlanCatalog planCatalog,
+    Serilog.ILogger logger) : ISubscriptionService
 {
     public async Task<Subscription> CreateAsync(Guid tenantId, SubscriptionPlanCode planCode, bool autoRenew, CancellationToken cancellationToken)
     {
@@ -62,6 +64,88 @@ public sealed class SubscriptionService(
             subscription.StartDate,
             subscription.EndDate,
             null);
+    }
+
+    public async Task<IReadOnlyCollection<SubscriptionDto>> GetAllSubscriptionsAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            var subscriptions = await dbContext.Subscriptions
+                .AsNoTracking()
+                .OrderByDescending(s => s.CreatedAt)
+                .ToListAsync(cancellationToken);
+
+            var tenantIds = subscriptions.Select(s => s.TenantId).Distinct().ToList();
+            var tenants = await dbContext.Tenants
+                .AsNoTracking()
+                .Where(t => tenantIds.Contains(t.Id))
+                .ToDictionaryAsync(t => t.Id, t => t.Name, cancellationToken);
+
+            var subscriptionDtos = subscriptions.Select(s =>
+            {
+                var plan = planCatalog.GetPlan(s.PlanCode);
+                return new SubscriptionDto(
+                    s.Id,
+                    s.TenantId,
+                    tenants.GetValueOrDefault(s.TenantId, "Unknown"),
+                    s.PlanCode,
+                    plan.DisplayName,
+                    s.Status,
+                    s.StartDate,
+                    s.EndDate,
+                    s.AutoRenew,
+                    s.BillingProvider,
+                    s.ExternalSubscriptionId);
+            }).ToList();
+
+            logger.Information("Retrieved {Count} subscriptions", subscriptionDtos.Count);
+            return subscriptionDtos.AsReadOnly();
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Error retrieving all subscriptions");
+            throw;
+        }
+    }
+
+    public async Task<SubscriptionDto?> GetSubscriptionByTenantIdAsync(Guid tenantId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var subscription = await dbContext.Subscriptions
+                .AsNoTracking()
+                .Where(s => s.TenantId == tenantId)
+                .OrderByDescending(s => s.CreatedAt)
+                .FirstOrDefaultAsync(cancellationToken);
+
+            if (subscription == null)
+            {
+                return null;
+            }
+
+            var tenant = await dbContext.Tenants
+                .AsNoTracking()
+                .FirstOrDefaultAsync(t => t.Id == tenantId, cancellationToken);
+
+            var plan = planCatalog.GetPlan(subscription.PlanCode);
+            return new SubscriptionDto(
+                subscription.Id,
+                subscription.TenantId,
+                tenant?.Name ?? "Unknown",
+                subscription.PlanCode,
+                plan.DisplayName,
+                subscription.Status,
+                subscription.StartDate,
+                subscription.EndDate,
+                subscription.AutoRenew,
+                subscription.BillingProvider,
+                subscription.ExternalSubscriptionId);
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Error retrieving subscription for tenant {TenantId}", tenantId);
+            throw;
+        }
     }
 }
 

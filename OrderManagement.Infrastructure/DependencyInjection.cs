@@ -43,8 +43,14 @@ using OrderManagement.Infrastructure.Reporting;
 using OrderManagement.Infrastructure.Subscriptions;
 using OrderManagement.Application.Branches;
 using OrderManagement.Application.Users;
+using OrderManagement.Application.MenuItems;
 using OrderManagement.Infrastructure.Branches;
 using OrderManagement.Infrastructure.Users;
+using OrderManagement.Infrastructure.MenuItems;
+using OrderManagement.Application.Receipts;
+using OrderManagement.Application.KPIs;
+using OrderManagement.Infrastructure.Receipts;
+using OrderManagement.Infrastructure.KPIs;
 
 namespace OrderManagement.Infrastructure;
 
@@ -74,8 +80,11 @@ public static class DependencyInjection
         services.AddIdentityCore<ApplicationUser>(options =>
             {
                 options.Password.RequireDigit = true;
-                options.Password.RequireUppercase = false;
-                options.Password.RequireNonAlphanumeric = false;
+                options.Password.RequireUppercase = true;
+                options.Password.RequireLowercase = true;
+                options.Password.RequireNonAlphanumeric = true;
+                options.Password.RequiredLength = 8;
+                options.Password.RequiredUniqueChars = 1;
                 options.SignIn.RequireConfirmedAccount = false;
             })
             .AddRoles<ApplicationRole>()
@@ -84,7 +93,14 @@ public static class DependencyInjection
             .AddDefaultTokenProviders();
 
         var jwtSection = configuration.GetSection("Jwt");
-        var key = Encoding.UTF8.GetBytes(jwtSection["Key"] ?? "CHANGE_ME_SUPER_SECRET");
+        var jwtKey = jwtSection["Key"];
+        if (string.IsNullOrWhiteSpace(jwtKey))
+        {
+            throw new InvalidOperationException(
+                "JWT key is not configured. Please set 'Jwt:Key' in appsettings.json or environment variables. " +
+                "The key must be at least 32 characters long for HS256 algorithm.");
+        }
+        var key = Encoding.UTF8.GetBytes(jwtKey);
 
         services.AddAuthentication(options =>
             {
@@ -125,6 +141,9 @@ public static class DependencyInjection
         services.AddScoped<ITenantService, TenantService>();
         services.AddScoped<IPaymentGatewayFactory, PaymentGatewayFactory>();
         services.AddScoped<IPaymentGateway, StripePaymentGateway>();
+        services.AddScoped<IPaymentService, PaymentService>();
+        services.AddScoped<IReceiptService, ReceiptService>();
+        services.AddScoped<IKpiService, KpiService>();
         services.AddScoped<IReportingService, ReportingService>();
         services.AddScoped<IInventoryService, InventoryService>();
         services.AddScoped<IQrOrderingService, QrOrderingService>();
@@ -143,6 +162,7 @@ public static class DependencyInjection
 
         services.AddScoped<IBranchService, BranchService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<IMenuItemService, MenuItemService>();
 
         return services;
     }

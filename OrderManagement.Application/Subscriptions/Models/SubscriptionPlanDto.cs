@@ -7,6 +7,7 @@ public sealed record SubscriptionPlanDto(
     string DisplayName,
     decimal MonthlyPrice,
     decimal AnnualPrice,
+    int? DurationDays,
     int MaxBranches,
     int MaxUsers,
     bool IncludesInventory,

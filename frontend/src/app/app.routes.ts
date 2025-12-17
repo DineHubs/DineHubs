@@ -1,5 +1,7 @@
 import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
+import { roleGuard } from './core/guards/role.guard';
+import { AppRoles } from './core/constants/roles.constants';
 
 export const routes: Routes = [
   {
@@ -38,6 +40,7 @@ export const routes: Routes = [
       },
       {
         path: 'kitchen',
+        canActivate: [roleGuard([AppRoles.Kitchen, AppRoles.Manager])],
         loadComponent: () => import('./features/kitchen/kitchen-display/kitchen-display.component').then(m => m.KitchenDisplayComponent)
       },
       {
@@ -55,6 +58,11 @@ export const routes: Routes = [
       {
         path: 'tenants',
         loadChildren: () => import('./features/tenants/tenants.routes').then(m => m.TENANTS_ROUTES)
+      },
+      {
+        path: 'subscriptions',
+        canActivate: [roleGuard([AppRoles.SuperAdmin])],
+        loadComponent: () => import('./features/subscriptions/subscriptions.component').then(m => m.SubscriptionsComponent)
       }
     ]
   },

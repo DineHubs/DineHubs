@@ -27,6 +27,29 @@ public class OrdersController(
     {
         try
         {
+            // Check model binding/validation errors
+            if (!ModelState.IsValid)
+            {
+                var errors = ModelState
+                    .Where(x => x.Value?.Errors.Count > 0)
+                    .SelectMany(x => x.Value!.Errors.Select(e => new { Field = x.Key, Message = e.ErrorMessage }))
+                    .ToList();
+                
+                logger.Warning("Order creation failed due to model validation errors: {Errors}", 
+                    string.Join(", ", errors.Select(e => $"{e.Field}: {e.Message}")));
+                
+                return BadRequest(new { 
+                    Message = "Invalid request data.",
+                    Errors = errors.Select(e => new { e.Field, e.Message })
+                });
+            }
+
+            if (request is null)
+            {
+                logger.Warning("Order creation failed: Request body is null");
+                return BadRequest(new { Message = "Request body is required." });
+            }
+
             if (tenantContext.BranchId is null)
             {
                 return BadRequest(new { Message = "Branch context is required." });
@@ -50,10 +73,21 @@ public class OrdersController(
             logger.Warning("Order creation failed: {Message}", ex.Message);
             return BadRequest(new { Message = ex.Message });
         }
+        catch (FormatException ex)
+        {
+            logger.Warning("Order creation failed due to format error (likely invalid GUID): {Message}", ex.Message);
+            return BadRequest(new { Message = "Invalid data format. Please check that all menu item IDs are valid GUIDs." });
+        }
+        catch (System.Text.Json.JsonException ex)
+        {
+            logger.Warning("Order creation failed due to JSON deserialization error: {Message}", ex.Message);
+            return BadRequest(new { Message = "Invalid JSON format. Please check the request data." });
+        }
         catch (Exception ex)
         {
-            logger.Error(ex, "Unexpected error creating order");
-            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while creating the order.");
+            logger.Error(ex, "Unexpected error creating order. Request: IsTakeAway={IsTakeAway}, ItemsCount={ItemsCount}", 
+                request?.IsTakeAway, request?.Items?.Count ?? 0);
+            return StatusCode(StatusCodes.Status500InternalServerError, new { Message = "An error occurred while creating the order." });
         }
     }
 
@@ -136,6 +170,115 @@ public class OrdersController(
         {
             logger.Error(ex, "Unexpected error updating order {OrderId} status", id);
             return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while updating the order status.");
+        }
+    }
+
+    [HttpPost("{id:guid}/cancel")]
+    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]
+    public async Task<IActionResult> CancelOrder(Guid id, [FromBody] CancelOrderRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (tenantContext.BranchId is null)
+            {
+                return BadRequest(new { Message = "Branch context is required." });
+            }
+
+            await orderService.CancelOrderAsync(
+                id,
+                request.Reason,
+                tenantContext.TenantId,
+                tenantContext.BranchId.Value,
+                cancellationToken);
+
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            logger.Warning("Order cancellation failed for {OrderId}: {Message}", id, ex.Message);
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Unexpected error cancelling order {OrderId}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while cancelling the order.");
+        }
+    }
+
+    [HttpDelete("{orderId:guid}/lines/{lineId:guid}")]
+    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]
+    public async Task<IActionResult> RemoveOrderLine(Guid orderId, Guid lineId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (tenantContext.BranchId is null)
+            {
+                return BadRequest(new { Message = "Branch context is required." });
+            }
+
+            await orderService.RemoveOrderLineAsync(
+                orderId,
+                lineId,
+                tenantContext.TenantId,
+                tenantContext.BranchId.Value,
+                cancellationToken);
+
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            logger.Warning("Error removing line {LineId} from order {OrderId}: {Message}", lineId, orderId, ex.Message);
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Unexpected error removing line {LineId} from order {OrderId}", lineId, orderId);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while removing the order line.");
+        }
+    }
+
+    [HttpPatch("{orderId:guid}/lines/{lineId:guid}")]
+    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]
+    public async Task<IActionResult> UpdateOrderLineQuantity(Guid orderId, Guid lineId, [FromBody] UpdateOrderLineRequest request, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (tenantContext.BranchId is null)
+            {
+                return BadRequest(new { Message = "Branch context is required." });
+            }
+
+            await orderService.UpdateOrderLineQuantityAsync(
+                orderId,
+                lineId,
+                request.Quantity,
+                tenantContext.TenantId,
+                tenantContext.BranchId.Value,
+                cancellationToken);
+
+            return NoContent();
+        }
+        catch (InvalidOperationException ex)
+        {
+            if (ex.Message.Contains("not found", StringComparison.OrdinalIgnoreCase))
+            {
+                return NotFound(new { Message = ex.Message });
+            }
+            logger.Warning("Error updating line {LineId} quantity in order {OrderId}: {Message}", lineId, orderId, ex.Message);
+            return BadRequest(new { Message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Unexpected error updating line {LineId} quantity in order {OrderId}", lineId, orderId);
+            return StatusCode(StatusCodes.Status500InternalServerError, "An error occurred while updating the order line quantity.");
         }
     }
 
