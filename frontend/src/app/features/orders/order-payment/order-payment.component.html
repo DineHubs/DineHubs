@@ -1,56 +1,134 @@
-<div class="payment-container">
-  <mat-card>
-    <mat-card-header>
-      <mat-card-title>Process Payment</mat-card-title>
-      <mat-card-subtitle>Order Total: RM {{ orderTotal.toFixed(2) }}</mat-card-subtitle>
-    </mat-card-header>
+<div class="min-h-screen bg-bg-light dark:bg-bg-dark p-4 md:p-6">
+  <div class="max-w-2xl mx-auto space-y-6">
+    <!-- Back Button -->
+    <button
+      [routerLink]="['/orders', orderId]"
+      class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95">
+      <lucide-icon [name]="arrowLeftIcon" size="20"></lucide-icon>
+      <span>Back to Order</span>
+    </button>
 
-    <mat-card-content>
-      @if (payment) {
-        <div class="payment-info">
-          <h3>Payment Status</h3>
-          <p><strong>Status:</strong> {{ getPaymentStatusText(payment.status) }}</p>
-          <p><strong>Provider:</strong> {{ payment.provider }}</p>
-          <p><strong>Amount:</strong> RM {{ payment.amount.toFixed(2) }}</p>
-          <p><strong>Reference:</strong> {{ payment.reference || 'N/A' }}</p>
-        </div>
-      } @else {
-        <form class="payment-form">
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Payment Provider</mat-label>
-            <mat-select [(ngModel)]="selectedProvider" name="provider">
-              @for (provider of paymentProviders; track provider) {
-                <mat-option [value]="provider">{{ provider }}</mat-option>
-              }
-            </mat-select>
-          </mat-form-field>
+    <!-- Payment Card -->
+    <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark overflow-hidden">
+      <!-- Header -->
+      <div class="p-4 md:p-6 border-b border-border-light dark:border-border-dark">
+        <h1 class="text-2xl md:text-3xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark mb-2">
+          Process Payment
+        </h1>
+        <p class="text-base md:text-lg text-text-secondary-light dark:text-text-secondary-dark">
+          Order Total: <span class="font-semibold text-text-primary-light dark:text-text-primary-dark">RM {{ orderTotal.toFixed(2) }}</span>
+        </p>
+      </div>
 
-          <mat-form-field appearance="outline" class="full-width">
-            <mat-label>Amount</mat-label>
-            <input matInput type="number" [(ngModel)]="amount" name="amount" [max]="orderTotal" min="0.01" step="0.01" required>
-            <span matPrefix>RM&nbsp;</span>
-            <mat-hint>Maximum: RM {{ orderTotal.toFixed(2) }}</mat-hint>
-          </mat-form-field>
-        </form>
-      }
-    </mat-card-content>
+      <!-- Content -->
+      <div class="p-4 md:p-6">
+        @if (payment) {
+          <!-- Payment Status -->
+          <div class="space-y-6">
+            <div class="p-4 md:p-6 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
+              <h2 class="text-lg md:text-xl font-semibold leading-tight text-text-primary-light dark:text-text-primary-dark mb-4">
+                Payment Status
+              </h2>
+              <div class="space-y-4">
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Status:</span>
+                  <span 
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border"
+                    [ngClass]="getPaymentStatusBadgeClasses(payment.status)">
+                    <lucide-icon [name]="getPaymentStatusIcon(payment.status)" size="14"></lucide-icon>
+                    {{ getPaymentStatusText(payment.status) }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Provider:</span>
+                  <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                    {{ payment.provider }}
+                  </span>
+                </div>
+                <div class="flex items-center justify-between">
+                  <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Amount:</span>
+                  <span class="text-lg font-bold text-primary">
+                    RM {{ payment.amount.toFixed(2) }}
+                  </span>
+                </div>
+                @if (payment.reference) {
+                  <div class="flex items-center justify-between">
+                    <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Reference:</span>
+                    <span class="text-sm font-mono text-text-primary-light dark:text-text-primary-dark">
+                      {{ payment.reference }}
+                    </span>
+                  </div>
+                }
+              </div>
+            </div>
+          </div>
+        } @else {
+          <!-- Payment Form -->
+          <form class="space-y-6" (ngSubmit)="processPayment(); $event.preventDefault()">
+            <!-- Payment Provider -->
+            <div>
+              <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+                Payment Provider
+              </label>
+              <select
+                [(ngModel)]="selectedProvider"
+                name="provider"
+                class="w-full px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 appearance-none cursor-pointer">
+                @for (provider of paymentProviders; track provider) {
+                  <option [value]="provider">{{ provider }}</option>
+                }
+              </select>
+            </div>
 
-    <mat-card-actions align="end">
-      @if (!payment) {
-        <button mat-raised-button color="primary" (click)="processPayment()" [disabled]="isLoading || amount <= 0">
-          @if (isLoading) {
-            <mat-spinner diameter="20" style="display: inline-block;"></mat-spinner>
-            <span style="margin-left: 8px;">Processing...</span>
-          } @else {
-            <mat-icon>payment</mat-icon>
-            <span>Process Payment</span>
-          }
-        </button>
-      }
-      <button mat-button (click)="router.navigate(['/orders', orderId])">
-        Back to Order
-      </button>
-    </mat-card-actions>
-  </mat-card>
+            <!-- Amount -->
+            <div>
+              <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+                Amount
+              </label>
+              <div class="relative">
+                <span class="absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark font-medium">
+                  RM
+                </span>
+                <input
+                  type="number"
+                  [(ngModel)]="amount"
+                  name="amount"
+                  [max]="orderTotal"
+                  min="0.01"
+                  step="0.01"
+                  required
+                  class="w-full pl-12 pr-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200"
+                  placeholder="0.00">
+              </div>
+              <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-1">
+                Maximum: RM {{ orderTotal.toFixed(2) }}
+              </p>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="flex items-center justify-end gap-3 pt-4 border-t border-border-light dark:border-border-dark">
+              <button
+                type="button"
+                [routerLink]="['/orders', orderId]"
+                class="px-6 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark font-medium transition-all duration-200 active:scale-95">
+                Cancel
+              </button>
+              <button
+                type="submit"
+                class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md hover:shadow-lg"
+                [disabled]="isLoading || amount <= 0 || amount > orderTotal">
+                @if (isLoading) {
+                  <div class="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                  <span>Processing Payment...</span>
+                } @else {
+                  <lucide-icon [name]="creditCardIcon" size="18"></lucide-icon>
+                  <span>Process Payment</span>
+                }
+              </button>
+            </div>
+          </form>
+        }
+      </div>
+    </div>
+  </div>
 </div>
-

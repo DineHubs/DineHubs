@@ -1,4 +1,39 @@
-/* You can add global styles to this file, and also import other style files */
+/* Tailwind CSS imports */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-html, body { height: 100%; }
-body { margin: 0; font-family: Roboto, "Helvetica Neue", sans-serif; }
+/* Global styles */
+html, body { 
+  height: 100%; 
+  margin: 0;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  @apply bg-bg-light dark:bg-bg-dark text-text-primary-light dark:text-text-primary-dark;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom scrollbar for webkit browsers */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-surface-light dark:bg-surface-dark;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-border-light dark:bg-border-dark rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-text-secondary-light dark:bg-text-secondary-dark;
+}
+
+/* Focus styles for accessibility */
+*:focus-visible {
+  @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-bg-light dark:ring-offset-bg-dark;
+}

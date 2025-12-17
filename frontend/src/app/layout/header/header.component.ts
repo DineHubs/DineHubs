@@ -1,22 +1,16 @@
-import { Component, EventEmitter, Output, inject } from '@angular/core';
+import { Component, EventEmitter, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatMenuModule } from '@angular/material/menu';
-import { MatDividerModule } from '@angular/material/divider';
+import { Router } from '@angular/router';
+import { LucideAngularModule, Menu, User, LogOut, Building2, Shield } from 'lucide-angular';
 import { AuthService } from '../../core/services/auth.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-header',
   standalone: true,
   imports: [
     CommonModule,
-    MatToolbarModule,
-    MatButtonModule,
-    MatIconModule,
-    MatMenuModule,
-    MatDividerModule
+    LucideAngularModule
   ],
   templateUrl: './header.component.html',
   styleUrl: './header.component.scss'
@@ -24,15 +18,37 @@ import { AuthService } from '../../core/services/auth.service';
 export class HeaderComponent {
   @Output() menuToggle = new EventEmitter<void>();
   private authService = inject(AuthService);
+  private themeService = inject(ThemeService);
+  private router = inject(Router);
 
   currentUser = this.authService.currentUser;
+  showUserMenu = signal(false);
+
+  // Icons
+  menuIcon = Menu;
+  userIcon = User;
+  logOutIcon = LogOut;
+  buildingIcon = Building2;
+  shieldIcon = Shield;
 
   onMenuToggle(): void {
     this.menuToggle.emit();
   }
 
+  toggleUserMenu(): void {
+    this.showUserMenu.set(!this.showUserMenu());
+  }
+
+  closeUserMenu(): void {
+    this.showUserMenu.set(false);
+  }
+
   onLogout(): void {
+    this.closeUserMenu();
     this.authService.logout();
   }
-}
 
+  get userRoles(): string {
+    return this.currentUser()?.roles?.join(', ') || 'None';
+  }
+}

@@ -1,63 +1,122 @@
-<div class="kitchen-display-container">
-  <div class="header">
-    <h1>Kitchen Display</h1>
-    <button mat-icon-button (click)="loadOrders()" [disabled]="isLoading" title="Refresh">
-      <mat-icon>refresh</mat-icon>
+<div class="min-h-screen bg-bg-light dark:bg-bg-dark p-4 md:p-6 space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+    <h1 class="text-2xl md:text-3xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">
+      Kitchen Display
+    </h1>
+    <button
+      type="button"
+      class="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+      (click)="loadOrders()"
+      [disabled]="isLoading()"
+      [attr.aria-label]="'Refresh orders'">
+      <lucide-icon [name]="refreshIcon" size="20" [class.animate-spin]="isLoading()"></lucide-icon>
     </button>
   </div>
 
-  @if (isLoading && orders.length === 0) {
-    <div class="loading-container">
-      <mat-spinner></mat-spinner>
+  <!-- Loading State -->
+  @if (isLoading() && orders().length === 0) {
+    <div class="flex items-center justify-center py-24">
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
     </div>
-  } @else {
-    <div class="orders-grid">
-      @if (orders.length === 0) {
-        <div class="empty-state">
-          <mat-icon>restaurant_menu</mat-icon>
-          <p>No orders in kitchen queue</p>
+  }
+
+  <!-- Orders Grid -->
+  @else {
+    @if (orders().length === 0) {
+      <!-- Empty State -->
+      <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-12 text-center">
+        <div class="p-4 rounded-full bg-primary/10 dark:bg-primary/20 inline-flex mb-4">
+          <lucide-icon [name]="chefHatIcon" size="64" class="text-primary"></lucide-icon>
         </div>
-      } @else {
-        @for (order of orders; track order.id) {
-          <mat-card class="order-card" [class.status-submitted]="order.status === OrderStatus.Submitted"
-                    [class.status-preparation]="order.status === OrderStatus.InPreparation"
-                    [class.status-ready]="order.status === OrderStatus.Ready">
-            <mat-card-header>
-              <mat-card-title>{{ order.orderNumber }}</mat-card-title>
-              <mat-card-subtitle>Table: {{ order.tableNumber || 'Take Away' }}</mat-card-subtitle>
-            </mat-card-header>
-            <mat-card-content>
-              <div class="order-items">
-                <h4>Items:</h4>
-                <ul>
-                  @for (line of order.lines; track line.menuItemId) {
-                    <li>{{ line.quantity }}x {{ line.name }} - ${{ (line.price * line.quantity).toFixed(2) }}</li>
-                  }
-                </ul>
+        <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark mb-2">
+          No Orders in Queue
+        </h2>
+        <p class="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark leading-relaxed">
+          All orders have been processed
+        </p>
+      </div>
+    }
+
+    @else {
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+        @for (order of orders(); track order.id) {
+          <div
+            class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 border border-border-light dark:border-border-dark overflow-hidden"
+            [ngClass]="getCardBorderClasses(order.status)">
+            <!-- Header -->
+            <div class="p-4 md:p-6 border-b border-border-light dark:border-border-dark">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="text-xl md:text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">
+                  {{ order.orderNumber }}
+                </h2>
+                <span
+                  class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border"
+                  [ngClass]="getStatusBadgeClasses(order.status)">
+                  <lucide-icon [name]="getStatusIcon(order.status)" size="14"></lucide-icon>
+                  {{ getStatusText(order.status) }}
+                </span>
               </div>
-              <div class="order-total">
-                <strong>Total: ${{ order.total.toFixed(2) }}</strong>
+              <p class="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark">
+                Table: <span class="font-semibold text-text-primary-light dark:text-text-primary-dark">{{ order.tableNumber || 'Take Away' }}</span>
+              </p>
+            </div>
+
+            <!-- Items -->
+            <div class="p-4 md:p-6 space-y-3">
+              <h3 class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark uppercase tracking-wide">
+                Items:
+              </h3>
+              <ul class="space-y-2">
+                @for (line of order.lines; track line.menuItemId) {
+                  <li class="flex items-center justify-between text-sm md:text-base">
+                    <span class="text-text-primary-light dark:text-text-primary-dark">
+                      <span class="font-semibold">{{ line.quantity }}x</span> {{ line.name }}
+                    </span>
+                    <span class="font-semibold text-text-secondary-light dark:text-text-secondary-dark">
+                      RM {{ (line.price * line.quantity).toFixed(2) }}
+                    </span>
+                  </li>
+                }
+              </ul>
+            </div>
+
+            <!-- Total -->
+            <div class="p-4 md:p-6 border-t border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark">
+              <div class="flex items-center justify-between">
+                <span class="text-base md:text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+                  Total:
+                </span>
+                <span class="text-lg md:text-xl font-bold text-primary">
+                  RM {{ order.total.toFixed(2) }}
+                </span>
               </div>
-              <mat-chip [color]="getStatusColor(order.status)">{{ getStatusText(order.status) }}</mat-chip>
-            </mat-card-content>
-            <mat-card-actions>
+            </div>
+
+            <!-- Actions -->
+            <div class="p-4 md:p-6 border-t border-border-light dark:border-border-dark">
               @if (order.status === OrderStatus.Submitted) {
-                <button mat-raised-button color="primary" (click)="updateOrderStatus(order.id, OrderStatus.InPreparation)">
-                  <mat-icon>play_arrow</mat-icon>
-                  Start Preparation
+                <button
+                  type="button"
+                  class="w-full px-6 py-4 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                  (click)="updateOrderStatus(order.id, OrderStatus.InPreparation)">
+                  <lucide-icon [name]="playIcon" size="20"></lucide-icon>
+                  <span>Start Preparation</span>
                 </button>
               }
               @if (order.status === OrderStatus.InPreparation) {
-                <button mat-raised-button color="accent" (click)="updateOrderStatus(order.id, OrderStatus.Ready)">
-                  <mat-icon>check</mat-icon>
-                  Mark Ready
+                <button
+                  type="button"
+                  class="w-full px-6 py-4 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                  (click)="updateOrderStatus(order.id, OrderStatus.Ready)">
+                  <lucide-icon [name]="checkCircleIcon" size="20"></lucide-icon>
+                  <span>Mark Ready</span>
                 </button>
               }
-            </mat-card-actions>
-          </mat-card>
+            </div>
+          </div>
         }
-      }
-    </div>
+      </div>
+    }
   }
 </div>
-

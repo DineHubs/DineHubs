@@ -1,16 +1,10 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ActivatedRoute, Router } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatSelectModule } from '@angular/material/select';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
 import { FormsModule } from '@angular/forms';
+import { ActivatedRoute, Router, RouterModule } from '@angular/router';
+import { LucideAngularModule, ArrowLeft, CreditCard, CheckCircle2, XCircle, Clock, AlertCircle } from 'lucide-angular';
 import { ApiService } from '../../../core/services/api.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { Order, Payment, ProcessPaymentRequest } from '../../../core/models/order.model';
 
 @Component({
@@ -18,15 +12,9 @@ import { Order, Payment, ProcessPaymentRequest } from '../../../core/models/orde
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatSelectModule,
-    MatSnackBarModule,
-    MatProgressSpinnerModule,
-    FormsModule
+    FormsModule,
+    RouterModule,
+    LucideAngularModule
   ],
   templateUrl: './order-payment.component.html',
   styleUrl: './order-payment.component.scss'
@@ -35,7 +23,7 @@ export class OrderPaymentComponent implements OnInit {
   private route = inject(ActivatedRoute);
   private apiService = inject(ApiService);
   router = inject(Router);
-  private snackBar = inject(MatSnackBar);
+  private toastService = inject(ToastService);
 
   orderId: string = '';
   orderTotal: number = 0;
@@ -46,6 +34,14 @@ export class OrderPaymentComponent implements OnInit {
   amount: number = 0;
   isLoading = false;
   payment: Payment | null = null;
+
+  // Icons
+  arrowLeftIcon = ArrowLeft;
+  creditCardIcon = CreditCard;
+  checkCircleIcon = CheckCircle2;
+  xCircleIcon = XCircle;
+  clockIcon = Clock;
+  alertCircleIcon = AlertCircle;
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -65,7 +61,7 @@ export class OrderPaymentComponent implements OnInit {
       },
       error: (error) => {
         console.error('Error loading order:', error);
-        this.snackBar.open('Failed to load order', 'Close', { duration: 3000 });
+        this.toastService.error('Failed to load order');
         this.router.navigate(['/orders']);
       }
     });
@@ -77,7 +73,6 @@ export class OrderPaymentComponent implements OnInit {
         this.payment = payment;
       },
       error: (error) => {
-        // Payment might not exist yet, which is fine
         if (error.status !== 404) {
           console.error('Error loading payment:', error);
         }
@@ -87,12 +82,12 @@ export class OrderPaymentComponent implements OnInit {
 
   processPayment(): void {
     if (this.amount <= 0) {
-      this.snackBar.open('Payment amount must be greater than zero', 'Close', { duration: 3000 });
+      this.toastService.error('Payment amount must be greater than zero');
       return;
     }
 
     if (this.amount > this.orderTotal) {
-      this.snackBar.open('Payment amount cannot exceed order total', 'Close', { duration: 3000 });
+      this.toastService.error('Payment amount cannot exceed order total');
       return;
     }
 
@@ -109,15 +104,14 @@ export class OrderPaymentComponent implements OnInit {
     this.apiService.post<Payment>(`Payments/orders/${this.orderId}/pay`, request).subscribe({
       next: (payment) => {
         this.payment = payment;
-        this.snackBar.open('Payment processed successfully', 'Close', { duration: 3000 });
+        this.toastService.success('Payment processed successfully');
         this.isLoading = false;
-        // Navigate back to order details or orders list
         this.router.navigate(['/orders', this.orderId]);
       },
       error: (error) => {
         console.error('Error processing payment:', error);
         const errorMessage = error.error?.message || 'Failed to process payment';
-        this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+        this.toastService.error(errorMessage);
         this.isLoading = false;
       }
     });
@@ -134,5 +128,28 @@ export class OrderPaymentComponent implements OnInit {
     };
     return statusMap[status] || 'Unknown';
   }
-}
 
+  getPaymentStatusIcon(status: number) {
+    const icons: Record<number, any> = {
+      1: this.clockIcon,
+      2: this.checkCircleIcon,
+      3: this.checkCircleIcon,
+      4: this.xCircleIcon,
+      5: this.alertCircleIcon,
+      6: this.xCircleIcon
+    };
+    return icons[status] || this.clockIcon;
+  }
+
+  getPaymentStatusBadgeClasses(status: number): string {
+    const classes: Record<number, string> = {
+      1: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 border-yellow-200 dark:border-yellow-700',
+      2: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700',
+      3: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700',
+      4: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700',
+      5: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700',
+      6: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700'
+    };
+    return classes[status] || 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+  }
+}

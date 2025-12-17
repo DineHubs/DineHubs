@@ -1,97 +1,240 @@
-import { Component, OnInit, ViewChild, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatTableModule, MatTableDataSource } from '@angular/material/table';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { MatSort, MatSortModule } from '@angular/material/sort';
-import { FormsModule } from '@angular/forms';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { CommonModule, NgClass } from '@angular/common';
+import { LucideAngularModule, Plus, Search, MapPin, Edit, Trash2, Building2, ChevronLeft, ChevronRight, X } from 'lucide-angular';
 import { ApiService } from '../../../core/services/api.service';
-import { BranchDialogComponent } from './branch-dialog/branch-dialog.component';
+import { ToastService } from '../../../core/services/toast.service';
+
+interface Branch {
+  id: string;
+  name: string;
+  location: string;
+}
 
 @Component({
-    selector: 'app-branch-management',
-    standalone: true,
-    imports: [
-        CommonModule,
-        MatCardModule,
-        MatButtonModule,
-        MatIconModule,
-        MatTableModule,
-        MatDialogModule,
-        MatSnackBarModule,
-        MatFormFieldModule,
-        MatInputModule,
-        MatPaginatorModule,
-        MatSortModule,
-        FormsModule
-    ],
-    templateUrl: './branch-management.component.html',
-    styleUrl: './branch-management.component.scss'
+  selector: 'app-branch-management',
+  standalone: true,
+  imports: [
+    CommonModule,
+    NgClass,
+    LucideAngularModule
+  ],
+  templateUrl: './branch-management.component.html',
+  styleUrl: './branch-management.component.scss'
 })
 export class BranchManagementComponent implements OnInit {
-    private apiService = inject(ApiService);
-    private dialog = inject(MatDialog);
-    private snackBar = inject(MatSnackBar);
+  private apiService = inject(ApiService);
+  private toastService = inject(ToastService);
 
-    dataSource = new MatTableDataSource<any>([]);
-    displayedColumns = ['name', 'location', 'actions'];
+  branches = signal<Branch[]>([]);
+  searchTerm = signal<string>('');
+  isLoading = signal<boolean>(false);
+  showAddModal = signal<boolean>(false);
+  showEditModal = signal<boolean>(false);
+  showDeleteModal = signal<boolean>(false);
+  selectedBranch = signal<Branch | null>(null);
+  branchForm = signal<{ name: string; location: string }>({ name: '', location: '' });
 
-    @ViewChild(MatPaginator) paginator!: MatPaginator;
-    @ViewChild(MatSort) sort!: MatSort;
+  // Pagination
+  currentPage = signal<number>(1);
+  pageSize = signal<number>(10);
+  pageSizeOptions = [5, 10, 25, 100];
 
-    ngOnInit(): void {
+  // Icons
+  plusIcon = Plus;
+  searchIcon = Search;
+  mapPinIcon = MapPin;
+  editIcon = Edit;
+  trashIcon = Trash2;
+  buildingIcon = Building2;
+  chevronLeftIcon = ChevronLeft;
+  chevronRightIcon = ChevronRight;
+  xIcon = X;
+
+  filteredBranches = computed(() => {
+    const term = this.searchTerm().toLowerCase();
+    if (!term) return this.branches();
+    return this.branches().filter(branch =>
+      branch.name.toLowerCase().includes(term) ||
+      branch.location.toLowerCase().includes(term)
+    );
+  });
+
+  totalPages = computed(() => Math.ceil(this.filteredBranches().length / this.pageSize()));
+  paginatedBranches = computed(() => {
+    const start = (this.currentPage() - 1) * this.pageSize();
+    const end = start + this.pageSize();
+    return this.filteredBranches().slice(start, end);
+  });
+
+  paginationInfo = computed(() => {
+    const total = this.filteredBranches().length;
+    const start = total > 0 ? (this.currentPage() - 1) * this.pageSize() + 1 : 0;
+    const end = Math.min(start + this.pageSize() - 1, total);
+    return { start, end, total };
+  });
+
+  ngOnInit(): void {
+    this.loadBranches();
+  }
+
+  loadBranches(): void {
+    this.isLoading.set(true);
+    this.apiService.get<Branch[]>('Branches').subscribe({
+      next: (data) => {
+        this.branches.set(data);
+        this.isLoading.set(false);
+      },
+      error: (err) => {
+        console.error('Error loading branches', err);
+        this.toastService.error('Failed to load branches');
+        this.isLoading.set(false);
+      }
+    });
+  }
+
+  onSearchChange(value: string): void {
+    this.searchTerm.set(value);
+    this.currentPage.set(1);
+  }
+
+  openAddModal(): void {
+    this.branchForm.set({ name: '', location: '' });
+    this.showAddModal.set(true);
+  }
+
+  closeAddModal(): void {
+    this.showAddModal.set(false);
+    this.branchForm.set({ name: '', location: '' });
+  }
+
+  openEditModal(branch: Branch): void {
+    this.selectedBranch.set(branch);
+    this.branchForm.set({ name: branch.name, location: branch.location });
+    this.showEditModal.set(true);
+  }
+
+  closeEditModal(): void {
+    this.showEditModal.set(false);
+    this.selectedBranch.set(null);
+    this.branchForm.set({ name: '', location: '' });
+  }
+
+  openDeleteModal(branch: Branch): void {
+    this.selectedBranch.set(branch);
+    this.showDeleteModal.set(true);
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal.set(false);
+    this.selectedBranch.set(null);
+  }
+
+  updateBranchName(value: string): void {
+    const current = this.branchForm();
+    this.branchForm.set({ ...current, name: value });
+  }
+
+  updateBranchLocation(value: string): void {
+    const current = this.branchForm();
+    this.branchForm.set({ ...current, location: value });
+  }
+
+  createBranch(): void {
+    const form = this.branchForm();
+    if (!form.name.trim() || !form.location.trim()) return;
+
+    this.apiService.post('Branches', form).subscribe({
+      next: () => {
+        this.toastService.success('Branch created successfully');
+        this.closeAddModal();
         this.loadBranches();
+      },
+      error: (err) => {
+        console.error('Error creating branch', err);
+        const errorMessage = err.error?.message || 'Failed to create branch';
+        this.toastService.error(errorMessage);
+      }
+    });
+  }
+
+  updateBranch(): void {
+    const branch = this.selectedBranch();
+    const form = this.branchForm();
+    if (!branch || !form.name.trim() || !form.location.trim()) return;
+
+    this.apiService.put(`Branches/${branch.id}`, form).subscribe({
+      next: () => {
+        this.toastService.success('Branch updated successfully');
+        this.closeEditModal();
+        this.loadBranches();
+      },
+      error: (err) => {
+        console.error('Error updating branch', err);
+        const errorMessage = err.error?.message || 'Failed to update branch';
+        this.toastService.error(errorMessage);
+      }
+    });
+  }
+
+  confirmDelete(): void {
+    const branch = this.selectedBranch();
+    if (!branch) return;
+
+    this.apiService.delete(`Branches/${branch.id}`).subscribe({
+      next: () => {
+        this.toastService.success('Branch deleted successfully');
+        this.closeDeleteModal();
+        this.loadBranches();
+      },
+      error: (err) => {
+        console.error('Error deleting branch', err);
+        const errorMessage = err.error?.message || 'Failed to delete branch';
+        this.toastService.error(errorMessage);
+      }
+    });
+  }
+
+  onPageSizeChange(size: number): void {
+    this.pageSize.set(size);
+    this.currentPage.set(1);
+  }
+
+  previousPage(): void {
+    if (this.currentPage() > 1) {
+      this.currentPage.set(this.currentPage() - 1);
     }
+  }
 
-    loadBranches(): void {
-        this.apiService.get<any[]>('Branches').subscribe({
-            next: (data) => {
-                this.dataSource.data = data;
-                this.dataSource.paginator = this.paginator;
-                this.dataSource.sort = this.sort;
-            },
-            error: (err) => console.error('Error loading branches', err)
-        });
+  nextPage(): void {
+    if (this.currentPage() < this.totalPages()) {
+      this.currentPage.set(this.currentPage() + 1);
     }
+  }
 
-    applyFilter(event: Event) {
-        const filterValue = (event.target as HTMLInputElement).value;
-        this.dataSource.filter = filterValue.trim().toLowerCase();
-
-        if (this.dataSource.paginator) {
-            this.dataSource.paginator.firstPage();
-        }
+  goToPage(page: number): void {
+    if (page >= 1 && page <= this.totalPages()) {
+      this.currentPage.set(page);
     }
+  }
 
-    openAddDialog(): void {
-        const dialogRef = this.dialog.open(BranchDialogComponent, {
-            width: '400px',
-            data: { name: '', location: '' }
-        });
+  getPageNumbers(): (number | -1)[] {
+    const total = this.totalPages();
+    const current = this.currentPage();
+    const pages: (number | -1)[] = [];
 
-        dialogRef.afterClosed().subscribe(result => {
-            if (result) {
-                this.createBranch(result);
-            }
-        });
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) {
+        pages.push(i);
+      }
+    } else {
+      pages.push(1);
+      if (current > 3) pages.push(-1);
+      if (current > 2 && current < total - 1) pages.push(current - 1);
+      if (current > 1 && current < total) pages.push(current);
+      if (current < total - 1 && current > 2) pages.push(current + 1);
+      if (current < total - 2) pages.push(-1);
+      pages.push(total);
     }
-
-    createBranch(branch: any): void {
-        this.apiService.post('Branches', branch).subscribe({
-            next: () => {
-                this.snackBar.open('Branch created successfully', 'Close', { duration: 3000 });
-                this.loadBranches();
-            },
-            error: (err) => {
-                console.error('Error creating branch', err);
-                this.snackBar.open(err.error || 'Failed to create branch', 'Close', { duration: 3000 });
-            }
-        });
-    }
+    return [...new Set(pages)].sort((a, b) => a - b);
+  }
 }

@@ -1,15 +1,10 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { FormBuilder, FormGroup, Validators, ReactiveFormsModule } from '@angular/forms';
 import { Router, ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
+import { LucideAngularModule, Mail, Key, Lock, Eye, EyeOff, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-angular';
 import { ApiService } from '../../../core/services/api.service';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
+import { ToastService } from '../../../core/services/toast.service';
 
 @Component({
   selector: 'app-reset-password',
@@ -17,13 +12,7 @@ import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
   imports: [
     CommonModule,
     ReactiveFormsModule,
-    MatCardModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatButtonModule,
-    MatIconModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule
+    LucideAngularModule
   ],
   templateUrl: './reset-password.component.html',
   styleUrl: './reset-password.component.scss'
@@ -33,12 +22,22 @@ export class ResetPasswordComponent implements OnInit {
   private apiService = inject(ApiService);
   private router = inject(Router);
   private route = inject(ActivatedRoute);
-  private snackBar = inject(MatSnackBar);
+  private toastService = inject(ToastService);
 
   resetPasswordForm: FormGroup;
-  isLoading = false;
-  hidePassword = true;
-  hideConfirmPassword = true;
+  isLoading = signal(false);
+  hidePassword = signal(true);
+  hideConfirmPassword = signal(true);
+
+  // Icons
+  mailIcon = Mail;
+  keyIcon = Key;
+  lockIcon = Lock;
+  eyeIcon = Eye;
+  eyeOffIcon = EyeOff;
+  arrowLeftIcon = ArrowLeft;
+  checkCircleIcon = CheckCircle2;
+  alertCircleIcon = AlertCircle;
 
   constructor() {
     this.resetPasswordForm = this.fb.group({
@@ -50,7 +49,6 @@ export class ResetPasswordComponent implements OnInit {
   }
 
   ngOnInit(): void {
-    // Get email and token from query parameters if available
     this.route.queryParams.subscribe(params => {
       if (params['email']) {
         this.resetPasswordForm.patchValue({ email: params['email'] });
@@ -74,28 +72,56 @@ export class ResetPasswordComponent implements OnInit {
 
   onSubmit(): void {
     if (this.resetPasswordForm.valid) {
-      this.isLoading = true;
+      this.isLoading.set(true);
 
       const { email, token, newPassword } = this.resetPasswordForm.value;
       this.apiService.post<any>('Auth/reset-password', { email, token, newPassword }).subscribe({
         next: (response) => {
-          this.isLoading = false;
-          this.snackBar.open(response.message || 'Password has been reset successfully.', 'Close', { duration: 5000 });
+          this.isLoading.set(false);
+          const message = response.message || 'Password has been reset successfully.';
+          this.toastService.success(message);
           setTimeout(() => {
             this.router.navigate(['/login']);
           }, 2000);
         },
         error: (error) => {
-          this.isLoading = false;
+          this.isLoading.set(false);
           const errorMessage = error.error?.message || 'Failed to reset password. Please check your token and try again.';
-          this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+          this.toastService.error(errorMessage);
         }
       });
+    } else {
+      Object.keys(this.resetPasswordForm.controls).forEach(key => {
+        this.resetPasswordForm.get(key)?.markAsTouched();
+      });
     }
+  }
+
+  togglePasswordVisibility(): void {
+    this.hidePassword.set(!this.hidePassword());
+  }
+
+  toggleConfirmPasswordVisibility(): void {
+    this.hideConfirmPassword.set(!this.hideConfirmPassword());
   }
 
   goToLogin(): void {
     this.router.navigate(['/login']);
   }
-}
 
+  get emailControl() {
+    return this.resetPasswordForm.get('email');
+  }
+
+  get tokenControl() {
+    return this.resetPasswordForm.get('token');
+  }
+
+  get newPasswordControl() {
+    return this.resetPasswordForm.get('newPassword');
+  }
+
+  get confirmPasswordControl() {
+    return this.resetPasswordForm.get('confirmPassword');
+  }
+}

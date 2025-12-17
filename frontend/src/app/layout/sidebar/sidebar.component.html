@@ -1,42 +1,88 @@
-<nav class="sidebar-nav">
-  <mat-nav-list>
+<nav class="h-full overflow-y-auto">
+  <div class="p-4 space-y-1">
     @if (menuItems().length === 0) {
-      <div class="empty-menu-message">
+      <div class="p-4 text-center text-text-secondary-light dark:text-text-secondary-dark text-sm">
         <p>No menu items available</p>
       </div>
     } @else {
       @for (item of menuItems(); track item.id) {
         @if (hasChildren(item)) {
-          <mat-expansion-panel class="menu-expansion">
-            <mat-expansion-panel-header>
-              <mat-panel-title>
-                @if (item.icon) {
-                  <mat-icon class="menu-icon">{{ item.icon }}</mat-icon>
+          <!-- Parent Item with Children -->
+          <div class="space-y-1">
+            <button
+              type="button"
+              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-border-light dark:hover:bg-border-dark active:scale-95"
+              (click)="toggleExpanded(item.id)"
+              [attr.aria-expanded]="isExpanded(item.id)"
+              [attr.aria-label]="item.label">
+              <lucide-icon 
+                [name]="getIcon(item.icon)" 
+                size="20" 
+                class="text-text-secondary-light dark:text-text-secondary-dark flex-shrink-0"
+                [class.invisible]="!hasIcon(item.icon)">
+              </lucide-icon>
+              <span class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark">{{ item.label }}</span>
+              <lucide-icon 
+                [name]="isExpanded(item.id) ? chevronDownIcon : chevronRightIcon" 
+                size="18" 
+                class="text-text-secondary-light dark:text-text-secondary-dark transition-transform duration-200"
+                [class.rotate-90]="isExpanded(item.id)">
+              </lucide-icon>
+            </button>
+            
+            <!-- Children Items -->
+            @if (isExpanded(item.id)) {
+              <div class="ml-4 space-y-1 border-l-2 border-border-light dark:border-border-dark pl-4">
+                @for (child of item.children; track child.id) {
+                  <button
+                    type="button"
+                    (click)="navigateTo(child.route)"
+                    [ngClass]="{
+                      'w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-200 hover:bg-border-light dark:hover:bg-border-dark active:scale-95 text-left': true,
+                      'bg-primary/10 dark:bg-primary/20': isActive(child.route),
+                      'text-primary': isActive(child.route)
+                    }">
+                    <lucide-icon 
+                      [name]="getIcon(child.icon)" 
+                      size="18" 
+                      class="flex-shrink-0"
+                      [class.invisible]="!hasIcon(child.icon)">
+                    </lucide-icon>
+                    <span class="font-medium">{{ child.label }}</span>
+                  </button>
                 }
-                <span>{{ item.label }}</span>
-              </mat-panel-title>
-            </mat-expansion-panel-header>
-            <div class="submenu">
-              @for (child of item.children; track child.id) {
-                <a mat-list-item [routerLink]="child.route" routerLinkActive="active">
-                  @if (child.icon) {
-                    <mat-icon matListItemIcon>{{ child.icon }}</mat-icon>
-                  }
-                  <span matListItemTitle>{{ child.label }}</span>
-                </a>
-              }
-            </div>
-          </mat-expansion-panel>
-        } @else {
-          <a mat-list-item [routerLink]="item.route" routerLinkActive="active">
-            @if (item.icon) {
-              <mat-icon matListItemIcon>{{ item.icon }}</mat-icon>
+              </div>
             }
-            <span matListItemTitle>{{ item.label }}</span>
-          </a>
+          </div>
+        } @else {
+          <!-- Single Item without Children -->
+          <button
+            type="button"
+            (click)="navigateTo(item.route)"
+            [ngClass]="{
+              'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-border-light dark:hover:bg-border-dark active:scale-95 text-left': true,
+              'bg-primary/10 dark:bg-primary/20': isActive(item.route),
+              'text-primary': isActive(item.route)
+            }">
+            <lucide-icon 
+              [name]="getIcon(item.icon)" 
+              size="20" 
+              [ngClass]="{
+                'text-text-secondary-light dark:text-text-secondary-dark flex-shrink-0': true,
+                'text-primary': isActive(item.route),
+                'invisible': !hasIcon(item.icon)
+              }">
+            </lucide-icon>
+            <span 
+              [ngClass]="{
+                'font-medium text-text-primary-light dark:text-text-primary-dark': true,
+                'text-primary': isActive(item.route)
+              }">
+              {{ item.label }}
+            </span>
+          </button>
         }
       }
     }
-  </mat-nav-list>
+  </div>
 </nav>
-

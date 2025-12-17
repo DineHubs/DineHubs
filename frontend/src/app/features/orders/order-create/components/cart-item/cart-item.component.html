@@ -1,0 +1,51 @@
+<div class="flex items-center gap-3 py-2 border-b border-border-light dark:border-border-dark last:border-b-0">
+  <!-- Item Info -->
+  <div class="flex-1 min-w-0">
+    <h4 class="font-semibold text-text-primary-light dark:text-text-primary-dark text-sm mb-0.5 truncate">
+      {{ cartItem.menuItem.name }}
+    </h4>
+    <p class="text-text-secondary-light dark:text-text-secondary-dark text-xs">
+      RM{{ cartItem.menuItem.price | number:'1.2-2' }} each
+    </p>
+  </div>
+
+  <!-- Quantity Controls -->
+  <div class="flex items-center gap-1.5">
+    <button
+      type="button"
+      class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95"
+      (click)="onQuantityChange(-1)"
+      [attr.aria-label]="'Decrease quantity of ' + cartItem.menuItem.name">
+      <lucide-icon [name]="minusIcon" size="16"></lucide-icon>
+    </button>
+    
+    <span class="min-w-[24px] text-center font-semibold text-text-primary-light dark:text-text-primary-dark text-sm">
+      {{ cartItem.quantity }}
+    </span>
+    
+    <button
+      type="button"
+      class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg bg-primary hover:bg-primary/90 text-white transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg"
+      (click)="onQuantityChange(1)"
+      [attr.aria-label]="'Increase quantity of ' + cartItem.menuItem.name">
+      <lucide-icon [name]="plusIcon" size="16"></lucide-icon>
+    </button>
+  </div>
+
+  <!-- Item Total -->
+  <div class="text-right min-w-[70px]">
+    <p class="font-bold text-base text-primary dark:text-primary">
+      RM{{ (cartItem.menuItem.price * cartItem.quantity) | number:'1.2-2' }}
+    </p>
+  </div>
+
+  <!-- Remove Button -->
+  <button
+    type="button"
+    class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg text-error hover:bg-error/10 transition-all duration-200 active:scale-95"
+    (click)="onRemove()"
+    [attr.aria-label]="'Remove ' + cartItem.menuItem.name + ' from cart'">
+    <lucide-icon [name]="trashIcon" size="16"></lucide-icon>
+  </button>
+</div>
+

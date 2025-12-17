@@ -1,0 +1,14 @@
+<div
+  class="flex items-center gap-3 px-4 py-3 rounded-xl border backdrop-blur-sm shadow-lg animate-slide-in"
+  [ngClass]="getColorClass()">
+  <lucide-icon [name]="getIcon()" size="20"></lucide-icon>
+  <p class="flex-1 text-sm font-medium">{{ toast().message }}</p>
+  <button
+    type="button"
+    class="p-1 rounded-lg hover:bg-black/10 dark:hover:bg-white/10 transition-colors active:scale-95"
+    (click)="close()"
+    [attr.aria-label]="'Close toast'">
+    <lucide-icon [name]="xIcon" size="16"></lucide-icon>
+  </button>
+</div>
+

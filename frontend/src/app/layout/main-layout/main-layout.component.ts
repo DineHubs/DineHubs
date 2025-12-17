@@ -1,12 +1,7 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterOutlet } from '@angular/router';
 import { BreakpointObserver, Breakpoints } from '@angular/cdk/layout';
-import { MatSidenavModule } from '@angular/material/sidenav';
-import { MatToolbarModule } from '@angular/material/toolbar';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatListModule } from '@angular/material/list';
 import { HeaderComponent } from '../header/header.component';
 import { SidebarComponent } from '../sidebar/sidebar.component';
 
@@ -16,11 +11,6 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
   imports: [
     CommonModule,
     RouterOutlet,
-    MatSidenavModule,
-    MatToolbarModule,
-    MatButtonModule,
-    MatIconModule,
-    MatListModule,
     HeaderComponent,
     SidebarComponent
   ],
@@ -30,18 +20,17 @@ import { SidebarComponent } from '../sidebar/sidebar.component';
 export class MainLayoutComponent implements OnInit {
   private breakpointObserver = inject(BreakpointObserver);
   
-  isMobile = false;
-  sidenavOpened = true;
+  isMobile = signal(false);
+  sidenavOpened = signal(true);
 
   ngOnInit(): void {
     this.breakpointObserver.observe([Breakpoints.Handset]).subscribe(result => {
-      this.isMobile = result.matches;
-      this.sidenavOpened = !result.matches;
+      this.isMobile.set(result.matches);
+      this.sidenavOpened.set(!result.matches);
     });
   }
 
   toggleSidenav(): void {
-    this.sidenavOpened = !this.sidenavOpened;
+    this.sidenavOpened.set(!this.sidenavOpened());
   }
 }
-

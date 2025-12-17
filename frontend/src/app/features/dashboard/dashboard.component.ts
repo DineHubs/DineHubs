@@ -1,14 +1,8 @@
-import { Component, OnInit, inject, OnDestroy } from '@angular/core';
+import { Component, OnInit, inject, OnDestroy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { MatGridListModule } from '@angular/material/grid-list';
-import { MatIconModule } from '@angular/material/icon';
-import { MatButtonModule } from '@angular/material/button';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSelectModule } from '@angular/material/select';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatSnackBarModule, MatSnackBar } from '@angular/material/snack-bar';
 import { RouterModule } from '@angular/router';
+import { LucideAngularModule, RefreshCw, AlertCircle, LayoutDashboard, ShoppingCart, Utensils, Users, Building2, ChefHat, Table, CreditCard, TrendingUp, DollarSign, Package, Circle } from 'lucide-angular';
+import { ToastService } from '../../core/services/toast.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { AuthService } from '../../core/services/auth.service';
 import { AppRoles } from '../../core/constants/roles.constants';
@@ -32,15 +26,8 @@ import { takeUntil } from 'rxjs/operators';
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
-    MatGridListModule,
-    MatIconModule,
-    MatButtonModule,
-    MatProgressSpinnerModule,
-    MatSelectModule,
-    MatFormFieldModule,
-    MatSnackBarModule,
     RouterModule,
+    LucideAngularModule,
     SalesTrendChartComponent,
     PieChartComponent,
     BarChartComponent
@@ -51,8 +38,23 @@ import { takeUntil } from 'rxjs/operators';
 export class DashboardComponent implements OnInit, OnDestroy {
   private dashboardService = inject(DashboardService);
   private authService = inject(AuthService);
-  private snackBar = inject(MatSnackBar);
+  private toastService = inject(ToastService);
   private destroy$ = new Subject<void>();
+
+  // Icons
+  refreshIcon = RefreshCw;
+  alertCircleIcon = AlertCircle;
+  dashboardIcon = LayoutDashboard;
+  shoppingCartIcon = ShoppingCart;
+  utensilsIcon = Utensils;
+  usersIcon = Users;
+  buildingIcon = Building2;
+  chefHatIcon = ChefHat;
+  tableIcon = Table;
+  creditCardIcon = CreditCard;
+  trendingUpIcon = TrendingUp;
+  dollarSignIcon = DollarSign;
+  packageIcon = Package;
 
   // Data
   stats: DashboardStats | null = null;
@@ -62,10 +64,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   ordersByHour: OrderHourlyCount[] = [];
 
   // UI State
-  isLoading = true;
-  hasError = false;
-  errorMessage = '';
-  selectedPeriod: 'today' | 'week' | 'month' | 'year' = 'today';
+  isLoading = signal(true);
+  hasError = signal(false);
+  errorMessage = signal('');
+  selectedPeriod = signal<'today' | 'week' | 'month' | 'year'>('today');
   
   // Stats cards
   statCards: Array<{
@@ -154,10 +156,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   loadDashboardData(): void {
-    this.isLoading = true;
-    this.hasError = false;
-    this.errorMessage = '';
-    const { from, to } = this.getDateRange(this.selectedPeriod);
+    this.isLoading.set(true);
+    this.hasError.set(false);
+    this.errorMessage.set('');
+    const { from, to } = this.getDateRange(this.selectedPeriod());
 
     // Load stats
     this.dashboardService.getStats(from, to).subscribe({
@@ -165,8 +167,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         try {
           this.stats = stats;
           this.updateStatCards();
-          this.isLoading = false;
-          this.hasError = false;
+          this.isLoading.set(false);
+          this.hasError.set(false);
         } catch (error: any) {
           console.error('Error processing dashboard stats:', error);
           this.handleError('Failed to process dashboard statistics');
@@ -193,13 +195,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   private handleError(message: string): void {
-    this.hasError = true;
-    this.errorMessage = message;
-    this.isLoading = false;
-    this.snackBar.open(message, 'Close', { 
-      duration: 5000,
-      panelClass: ['error-snackbar']
-    });
+    this.hasError.set(true);
+    this.errorMessage.set(message);
+    this.isLoading.set(false);
+    this.toastService.error(message);
   }
 
   private loadManagerCharts(from: Date, to: Date): void {
@@ -216,7 +215,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error loading sales trend:', error);
         this.salesTrend = [];
-        this.snackBar.open('Failed to load sales trend chart', 'Close', { duration: 3000 });
+        this.toastService.error('Failed to load sales trend chart');
       }
     });
 
@@ -239,7 +238,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.error('Error loading top items:', error);
         this.topItems = [];
         this.topItemsChartData = [];
-        this.snackBar.open('Failed to load top selling items chart', 'Close', { duration: 3000 });
+        this.toastService.error('Failed to load top selling items chart');
       }
     });
 
@@ -262,7 +261,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.error('Error loading orders by status:', error);
         this.ordersByStatus = [];
         this.statusChartData = [];
-        this.snackBar.open('Failed to load orders by status chart', 'Close', { duration: 3000 });
+        this.toastService.error('Failed to load orders by status chart');
       }
     });
 
@@ -285,7 +284,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.error('Error loading hourly orders:', error);
         this.ordersByHour = [];
         this.hourlyChartData = [];
-        this.snackBar.open('Failed to load hourly orders chart', 'Close', { duration: 3000 });
+        this.toastService.error('Failed to load hourly orders chart');
       }
     });
   }
@@ -312,7 +311,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
         console.error('Error loading kitchen orders:', error);
         this.ordersByStatus = [];
         this.statusChartData = [];
-        this.snackBar.open('Failed to load kitchen order statistics', 'Close', { duration: 3000 });
+        this.toastService.error('Failed to load kitchen order statistics');
       }
     });
   }
@@ -334,7 +333,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error loading subscription status breakdown:', error);
         this.subscriptionStatusData = [];
-        this.snackBar.open('Failed to load subscription status chart', 'Close', { duration: 3000 });
+        this.toastService.error('Failed to load subscription status chart');
       }
     });
 
@@ -354,7 +353,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: (error) => {
         console.error('Error loading subscription trend:', error);
         this.subscriptionTrendData = [];
-        this.snackBar.open('Failed to load subscription trend chart', 'Close', { duration: 3000 });
+        this.toastService.error('Failed to load subscription trend chart');
       }
     });
   }
@@ -474,16 +473,32 @@ export class DashboardComponent implements OnInit, OnDestroy {
   } catch (error: any) {
     console.error('Error updating stat cards:', error);
     this.statCards = [];
-    this.snackBar.open('Failed to display statistics cards', 'Close', { duration: 3000 });
+    this.toastService.error('Failed to display statistics cards');
   }
 }
 
   onPeriodChange(period: 'today' | 'week' | 'month' | 'year'): void {
-    this.selectedPeriod = period;
+    this.selectedPeriod.set(period);
     this.loadDashboardData();
   }
 
   formatCurrency(value: number): string {
     return `RM ${value.toFixed(2)}`;
+  }
+
+  getIconForStat(iconName: string): any {
+    const iconMap: { [key: string]: any } = {
+      'trending_up': TrendingUp,
+      'shopping_cart': ShoppingCart,
+      'dollar': DollarSign,
+      'store': Building2,
+      'people': Users,
+      'business': Building2,
+      'add_circle': CreditCard,
+      'verified': CreditCard,
+      'queue': Package,
+      'warning': AlertCircle
+    };
+    return iconMap[iconName] || Circle;
   }
 }

@@ -1,24 +1,20 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatCheckboxModule } from '@angular/material/checkbox';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatBadgeModule } from '@angular/material/badge';
-import { MatDividerModule } from '@angular/material/divider';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ThemeService } from '../../../core/services/theme.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { MenuItem } from '../../../core/models/menu-item.model';
 import { CreateOrderRequest, OrderLine } from '../../../core/models/order.model';
+import { ProductGridComponent } from './components/product-grid/product-grid.component';
+import { CategoryNavComponent } from './components/category-nav/category-nav.component';
+import { OrderSidebarComponent } from './components/order-sidebar/order-sidebar.component';
+import { CheckoutModalComponent, PaymentProvider } from './components/checkout-modal/checkout-modal.component';
+import { LucideAngularModule, Search, Moon, Sun } from 'lucide-angular';
 
-interface CartItem {
+export interface CartItem {
   menuItem: MenuItem;
   quantity: number;
 }
@@ -29,17 +25,11 @@ interface CartItem {
   imports: [
     CommonModule,
     FormsModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatSnackBarModule,
-    MatProgressSpinnerModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatCheckboxModule,
-    MatChipsModule,
-    MatBadgeModule,
-    MatDividerModule
+    ProductGridComponent,
+    CategoryNavComponent,
+    OrderSidebarComponent,
+    CheckoutModalComponent,
+    LucideAngularModule
   ],
   templateUrl: './order-create.component.html',
   styleUrl: './order-create.component.scss'
@@ -48,117 +38,187 @@ export class OrderCreateComponent implements OnInit {
   private apiService = inject(ApiService);
   private authService = inject(AuthService);
   private router = inject(Router);
-  private snackBar = inject(MatSnackBar);
+  private themeService = inject(ThemeService);
+  private toastService = inject(ToastService);
 
-  menuItems: MenuItem[] = [];
-  filteredItems: MenuItem[] = [];
-  cart: CartItem[] = [];
-  tableNumber: string = '';
-  isTakeAway: boolean = false;
-  isLoading = false;
-  isSubmitting = false;
-  selectedCategory = 'All';
-  categories: string[] = [];
-  searchTerm = '';
+  // Signals for state management
+  menuItems = signal<MenuItem[]>([]);
+  cart = signal<CartItem[]>([]);
+  tableNumber = signal<string>('');
+  isTakeAway = signal<boolean>(false);
+  isLoading = signal<boolean>(false);
+  isSubmitting = signal<boolean>(false);
+  selectedCategory = signal<string>('All');
+  searchTerm = signal<string>('');
 
-  ngOnInit(): void {
-    // Access control handled by route guard
-    this.loadMenuItems();
-  }
+  // Computed values
+  categories = computed(() => {
+    const items = this.menuItems();
+    return ['All', ...new Set(items.map(item => item.category))];
+  });
 
-  loadMenuItems(): void {
-    this.isLoading = true;
-    this.apiService.get<MenuItem[]>('MenuItems').subscribe({
-      next: (items) => {
-        this.menuItems = items.filter(item => item.isAvailable);
-        this.filteredItems = this.menuItems;
-        this.categories = ['All', ...new Set(this.menuItems.map(item => item.category))];
-        this.isLoading = false;
-      },
-      error: (error) => {
-        console.error('Error loading menu items:', error);
-        this.snackBar.open('Failed to load menu items', 'Close', { duration: 3000 });
-        this.isLoading = false;
-      }
-    });
-  }
+  filteredItems = computed(() => {
+    let filtered = this.menuItems();
+    const category = this.selectedCategory();
+    const search = this.searchTerm().trim().toLowerCase();
 
-  filterByCategory(category: string): void {
-    this.selectedCategory = category;
-    this.applyFilters();
-  }
-
-  onSearchChange(): void {
-    this.applyFilters();
-  }
-
-  applyFilters(): void {
-    let filtered = this.menuItems;
-
-    if (this.selectedCategory !== 'All') {
-      filtered = filtered.filter(item => item.category === this.selectedCategory);
+    if (category !== 'All') {
+      filtered = filtered.filter(item => item.category === category);
     }
 
-    if (this.searchTerm.trim()) {
-      const search = this.searchTerm.toLowerCase();
+    if (search) {
       filtered = filtered.filter(item =>
         item.name.toLowerCase().includes(search) ||
         item.category.toLowerCase().includes(search)
       );
     }
 
-    this.filteredItems = filtered;
+    return filtered;
+  });
+
+  cartTotal = computed(() => {
+    return this.cart().reduce((total, item) => 
+      total + (item.menuItem.price * item.quantity), 0
+    );
+  });
+
+  cartItemCount = computed(() => {
+    return this.cart().reduce((count, item) => count + item.quantity, 0);
+  });
+
+  // Checkout modal state
+  isCheckoutOpen = signal<boolean>(false);
+
+  // Theme icons
+  searchIcon = Search;
+  moonIcon = Moon;
+  sunIcon = Sun;
+
+  get themeIcon() {
+    return this.themeService.theme() === 'dark' ? this.sunIcon : this.moonIcon;
+  }
+
+  get isDarkMode() {
+    return this.themeService.theme() === 'dark';
+  }
+
+  ngOnInit(): void {
+    this.loadMenuItems();
+  }
+
+  loadMenuItems(): void {
+    this.isLoading.set(true);
+    this.apiService.get<MenuItem[]>('MenuItems').subscribe({
+      next: (items) => {
+        this.menuItems.set(items.filter(item => item.isAvailable));
+        this.isLoading.set(false);
+      },
+      error: (error) => {
+        console.error('Error loading menu items:', error);
+        this.isLoading.set(false);
+        this.toastService.error('Failed to load menu items');
+      }
+    });
+  }
+
+  filterByCategory(category: string): void {
+    this.selectedCategory.set(category);
+  }
+
+  onSearchChange(value: string): void {
+    this.searchTerm.set(value);
   }
 
   addToCart(menuItem: MenuItem): void {
-    const existingItem = this.cart.find(item => item.menuItem.id === menuItem.id);
+    const currentCart = this.cart();
+    const existingItem = currentCart.find(item => item.menuItem.id === menuItem.id);
+    
     if (existingItem) {
-      existingItem.quantity++;
+      this.cart.set(
+        currentCart.map(item =>
+          item.menuItem.id === menuItem.id
+            ? { ...item, quantity: item.quantity + 1 }
+            : item
+        )
+      );
     } else {
-      this.cart.push({ menuItem, quantity: 1 });
+      this.cart.set([...currentCart, { menuItem, quantity: 1 }]);
     }
-    this.snackBar.open(`${menuItem.name} added to cart`, 'Close', { duration: 2000 });
+    this.toastService.success(`${menuItem.name} added to cart`);
   }
 
   removeFromCart(cartItem: CartItem): void {
-    const index = this.cart.indexOf(cartItem);
-    if (index > -1) {
-      this.cart.splice(index, 1);
-    }
+    this.cart.set(
+      this.cart().filter(item => item !== cartItem)
+    );
   }
 
   updateQuantity(cartItem: CartItem, change: number): void {
-    cartItem.quantity += change;
-    if (cartItem.quantity <= 0) {
+    const newQuantity = cartItem.quantity + change;
+    if (newQuantity <= 0) {
       this.removeFromCart(cartItem);
+    } else {
+      this.cart.set(
+        this.cart().map(item =>
+          item === cartItem
+            ? { ...item, quantity: newQuantity }
+            : item
+        )
+      );
     }
   }
 
-  getCartTotal(): number {
-    return this.cart.reduce((total, item) => total + (item.menuItem.price * item.quantity), 0);
+  clearCart(): void {
+    this.cart.set([]);
   }
 
-  getCartItemCount(): number {
-    return this.cart.reduce((count, item) => count + item.quantity, 0);
+  onCheckout(): void {
+    const currentCart = this.cart();
+    
+    if (currentCart.length === 0) {
+      this.toastService.error('Please add items to cart before checkout');
+      return;
+    }
+
+    const isTakeAway = this.isTakeAway();
+    const tableNum = this.tableNumber().trim();
+
+    if (!isTakeAway && !tableNum) {
+      this.toastService.error('Please enter a table number or select Take Away');
+      return;
+    }
+
+    this.isCheckoutOpen.set(true);
+  }
+
+  onPaymentProcessed(payment: { provider: PaymentProvider; amount: number }): void {
+    this.submitOrder();
+  }
+
+  onCheckoutClosed(): void {
+    this.isCheckoutOpen.set(false);
   }
 
   submitOrder(): void {
-    if (this.cart.length === 0) {
-      this.snackBar.open('Please add items to cart before submitting', 'Close', { duration: 3000 });
+    const currentCart = this.cart();
+    
+    if (currentCart.length === 0) {
+      this.toastService.error('Please add items to cart before submitting');
       return;
     }
 
-    if (!this.isTakeAway && !this.tableNumber.trim()) {
-      this.snackBar.open('Please enter a table number or select Take Away', 'Close', { duration: 3000 });
+    const isTakeAway = this.isTakeAway();
+    const tableNum = this.tableNumber().trim();
+
+    if (!isTakeAway && !tableNum) {
+      this.toastService.error('Please enter a table number or select Take Away');
       return;
     }
 
-    this.isSubmitting = true;
+    this.isSubmitting.set(true);
 
     try {
-      // Validate and convert menu item IDs to ensure they're valid GUIDs
-      const orderLines: OrderLine[] = this.cart.map(item => {
-        // Ensure menuItemId is a valid GUID string
+      const orderLines: OrderLine[] = currentCart.map(item => {
         const menuItemId = item.menuItem.id;
         if (!menuItemId || !this.isValidGuid(menuItemId)) {
           throw new Error(`Invalid menu item ID: ${menuItemId}`);
@@ -173,25 +233,24 @@ export class OrderCreateComponent implements OnInit {
       });
 
       const orderRequest: CreateOrderRequest = {
-        isTakeAway: this.isTakeAway,
-        tableNumber: this.isTakeAway ? undefined : this.tableNumber.trim(),
+        isTakeAway: isTakeAway,
+        tableNumber: isTakeAway ? undefined : tableNum,
         items: orderLines
       };
 
       this.apiService.post<any>('Orders', orderRequest).subscribe({
         next: (response) => {
-          this.snackBar.open('Order created successfully!', 'Close', { duration: 3000 });
+          this.toastService.success('Order created successfully!');
+          this.isCheckoutOpen.set(false);
           this.router.navigate(['/orders']);
         },
         error: (error) => {
           console.error('Error creating order:', error);
-          // Extract error message from various possible locations
           let errorMessage = 'Failed to create order';
           if (error.error) {
             if (error.error.message) {
               errorMessage = error.error.message;
             } else if (error.error.errors && typeof error.error.errors === 'object') {
-              // FluentValidation/ModelState errors - can be array or object
               const errorValues = Object.values(error.error.errors);
               const validationErrors: string[] = [];
               errorValues.forEach(err => {
@@ -212,19 +271,35 @@ export class OrderCreateComponent implements OnInit {
               errorMessage = error.error;
             }
           }
-          this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
-          this.isSubmitting = false;
+          this.toastService.error(errorMessage);
+          this.isSubmitting.set(false);
         }
       });
     } catch (error: any) {
       console.error('Error preparing order:', error);
-      this.snackBar.open(error.message || 'Failed to prepare order', 'Close', { duration: 5000 });
-      this.isSubmitting = false;
+      this.toastService.error(error.message || 'Failed to prepare order');
+      this.isSubmitting.set(false);
     }
   }
 
-  clearCart(): void {
-    this.cart = [];
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
+  }
+
+  onCartQuantityChange(event: { item: CartItem; change: number }): void {
+    this.updateQuantity(event.item, event.change);
+  }
+
+  onCartItemRemoved(item: CartItem): void {
+    this.removeFromCart(item);
+  }
+
+  onTableNumberChange(value: string): void {
+    this.tableNumber.set(value);
+  }
+
+  onTakeAwayToggle(value: boolean): void {
+    this.isTakeAway.set(value);
   }
 
   private isValidGuid(value: string): boolean {

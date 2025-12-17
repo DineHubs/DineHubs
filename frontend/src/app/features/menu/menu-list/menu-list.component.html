@@ -1,110 +1,307 @@
-<div class="menu-list-container">
-  <div class="menu-header">
-    <h1>Menu Management</h1>
-    <button mat-raised-button color="primary" (click)="openAddDialog()">
-      <mat-icon>add</mat-icon>
+<div class="min-h-screen bg-bg-light dark:bg-bg-dark p-4 md:p-6 space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+    <h1 class="text-2xl md:text-3xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">
+      Menu Management
+    </h1>
+    <button
+      type="button"
+      class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md hover:shadow-lg"
+      (click)="openAddDialog()">
+      <lucide-icon [name]="plusIcon" size="20"></lucide-icon>
       <span>Add Menu Item</span>
     </button>
   </div>
 
-  <div class="menu-filters">
-    <mat-form-field appearance="outline" class="search-field">
-      <mat-label>Search</mat-label>
-      <input matInput [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange()" placeholder="Search menu items...">
-      <mat-icon matPrefix>search</mat-icon>
-    </mat-form-field>
+  <!-- Filters and View Toggle -->
+  <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark p-4 md:p-6">
+    <div class="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
+      <!-- Search -->
+      <div class="relative flex-1 w-full md:min-w-[300px]">
+        <lucide-icon [name]="searchIcon" size="20" class="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark"></lucide-icon>
+        <input
+          type="text"
+          [value]="searchTerm()"
+          (input)="searchTerm.set($any($event.target).value); onSearchChange()"
+          placeholder="Search menu items..."
+          class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200">
+      </div>
 
-    <div class="view-toggle">
-      <button mat-icon-button [class.active]="viewMode === 'grid'" (click)="viewMode = 'grid'">
-        <mat-icon>grid_view</mat-icon>
-      </button>
-      <button mat-icon-button [class.active]="viewMode === 'list'" (click)="viewMode = 'list'">
-        <mat-icon>list</mat-icon>
-      </button>
+      <!-- View Toggle -->
+      <div class="flex items-center gap-2 p-1 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark">
+        <button
+          type="button"
+          [ngClass]="{
+            'bg-primary text-white': viewMode() === 'grid',
+            'text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark': viewMode() !== 'grid'
+          }"
+          class="p-2 rounded-lg transition-all duration-200 active:scale-95"
+          (click)="viewMode.set('grid')">
+          <lucide-icon [name]="gridIcon" size="20"></lucide-icon>
+        </button>
+        <button
+          type="button"
+          [ngClass]="{
+            'bg-primary text-white': viewMode() === 'list',
+            'text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark': viewMode() !== 'list'
+          }"
+          class="p-2 rounded-lg transition-all duration-200 active:scale-95"
+          (click)="viewMode.set('list')">
+          <lucide-icon [name]="listIcon" size="20"></lucide-icon>
+        </button>
+      </div>
+    </div>
+
+    <!-- Category Tabs -->
+    <div class="mt-4 flex overflow-x-auto gap-2 pb-2 scrollbar-hide">
+      @for (category of categories(); track category) {
+        <button
+          type="button"
+          [ngClass]="{
+            'bg-primary text-white': selectedCategory() === category,
+            'bg-bg-light dark:bg-bg-dark text-text-primary-light dark:text-text-primary-dark hover:bg-border-light dark:hover:bg-border-dark': selectedCategory() !== category
+          }"
+          class="flex-shrink-0 rounded-full px-4 md:px-6 py-2 text-sm font-medium transition-all duration-200 active:scale-95 whitespace-nowrap border border-border-light dark:border-border-dark"
+          (click)="filterByCategory(category)">
+          {{ category }}
+        </button>
+      }
     </div>
   </div>
 
-  <mat-tab-group [(selectedIndex)]="selectedCategory" (selectedIndexChange)="filterByCategory(categories[$event])">
-    @for (category of categories; track category) {
-      <mat-tab [label]="category"></mat-tab>
-    }
-  </mat-tab-group>
-
-  @if (isLoading) {
-    <div class="loading-container">
-      <mat-spinner></mat-spinner>
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-24">
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
     </div>
-  } @else {
-    @if (viewMode === 'grid') {
-      <div class="menu-grid">
-        @for (item of filteredItems; track item.id) {
-          <mat-card class="menu-card">
-            <div class="menu-image" [style.background-image]="'url(' + (item.imageUrl || 'assets/placeholder-food.jpg') + ')'">
-              @if (!item.isAvailable) {
-                <div class="unavailable-overlay">
-                  <span>Unavailable</span>
-                </div>
-              }
-            </div>
-            <mat-card-content>
-              <div class="menu-header-info">
-                <h3>{{ item.name }}</h3>
-                <mat-chip [class.available]="item.isAvailable" [class.unavailable]="!item.isAvailable">
-                  {{ item.isAvailable ? 'Available' : 'Unavailable' }}
-                </mat-chip>
-              </div>
-              <p class="category">{{ item.category }}</p>
-              <p class="price">RM {{ item.price.toFixed(2) }}</p>
-            </mat-card-content>
-            <mat-card-actions>
-              <button mat-button (click)="toggleAvailability(item)">
-                <mat-icon>{{ item.isAvailable ? 'toggle_on' : 'toggle_off' }}</mat-icon>
-                <span>{{ item.isAvailable ? 'Disable' : 'Enable' }}</span>
-              </button>
-              <button mat-button (click)="openEditDialog(item)">
-                <mat-icon>edit</mat-icon>
-                <span>Edit</span>
-              </button>
-              <button mat-button color="warn" (click)="deleteItem(item)">
-                <mat-icon>delete</mat-icon>
-                <span>Delete</span>
-              </button>
-            </mat-card-actions>
-          </mat-card>
-        }
-      </div>
-    } @else {
-      <div class="menu-list-view">
-        @for (item of filteredItems; track item.id) {
-          <mat-card class="menu-item-row">
-            <div class="item-image" [style.background-image]="'url(' + (item.imageUrl || 'assets/placeholder-food.jpg') + ')'"></div>
-            <div class="item-info">
-              <h3>{{ item.name }}</h3>
-              <p class="category">{{ item.category }}</p>
-              <p class="price">RM {{ item.price.toFixed(2) }}</p>
-            </div>
-            <div class="item-actions">
-              <button mat-icon-button (click)="toggleAvailability(item)" [color]="item.isAvailable ? 'primary' : ''">
-                <mat-icon>{{ item.isAvailable ? 'toggle_on' : 'toggle_off' }}</mat-icon>
-              </button>
-              <button mat-icon-button (click)="openEditDialog(item)">
-                <mat-icon>edit</mat-icon>
-              </button>
-              <button mat-icon-button color="warn" (click)="deleteItem(item)">
-                <mat-icon>delete</mat-icon>
-              </button>
-            </div>
-          </mat-card>
+  }
+
+  <!-- Content -->
+  @else {
+    @if (filteredItems().length === 0) {
+      <!-- Empty State -->
+      <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-12 text-center">
+        <div class="p-4 rounded-full bg-primary/10 dark:bg-primary/20 inline-flex mb-4">
+          <lucide-icon [name]="utensilsIcon" size="48" class="text-primary"></lucide-icon>
+        </div>
+        <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark mb-2">
+          No menu items found
+        </h2>
+        <p class="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark mb-6 leading-relaxed">
+          @if (searchTerm() || selectedCategory() !== 'All') {
+            Try adjusting your search or category filter
+          } @else {
+            Get started by adding your first menu item
+          }
+        </p>
+        @if (!searchTerm() && selectedCategory() === 'All') {
+          <button
+            type="button"
+            class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md hover:shadow-lg mx-auto"
+            (click)="openAddDialog()">
+            <lucide-icon [name]="plusIcon" size="20"></lucide-icon>
+            <span>Add Menu Item</span>
+          </button>
         }
       </div>
     }
 
-    @if (filteredItems.length === 0) {
-      <div class="empty-state">
-        <mat-icon>restaurant_menu</mat-icon>
-        <p>No menu items found</p>
-      </div>
+    @else {
+      <!-- Grid View -->
+      @if (viewMode() === 'grid') {
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          @for (item of filteredItems(); track item.id) {
+            <div class="group relative bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 overflow-hidden border border-border-light dark:border-border-dark">
+              <!-- Image -->
+              <div class="relative h-48 bg-bg-light dark:bg-bg-dark overflow-hidden">
+                <img
+                  [src]="item.imageUrl || 'assets/placeholder-food.jpg'"
+                  [alt]="item.name"
+                  class="w-full h-full object-cover">
+                @if (!item.isAvailable) {
+                  <div class="absolute inset-0 bg-black/60 flex items-center justify-center">
+                    <span class="px-4 py-2 rounded-full bg-red-600 text-white text-sm font-semibold">Unavailable</span>
+                  </div>
+                }
+              </div>
+
+              <!-- Content -->
+              <div class="p-4 space-y-3">
+                <div class="flex items-start justify-between gap-2">
+                  <h3 class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight flex-1">
+                    {{ item.name }}
+                  </h3>
+                  <span
+                    [ngClass]="{
+                      'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700': item.isAvailable,
+                      'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700': !item.isAvailable
+                    }"
+                    class="flex-shrink-0 px-2 py-1 rounded-full text-xs font-medium border">
+                    {{ item.isAvailable ? 'Available' : 'Unavailable' }}
+                  </span>
+                </div>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">{{ item.category }}</p>
+                <p class="text-xl font-bold text-primary">RM {{ item.price.toFixed(2) }}</p>
+
+                <!-- Actions -->
+                <div class="flex items-center gap-2 pt-2 border-t border-border-light dark:border-border-dark">
+                  <button
+                    type="button"
+                    class="flex-1 px-3 py-2 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95"
+                    [ngClass]="{
+                      'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50': item.isAvailable,
+                      'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50': !item.isAvailable
+                    }"
+                    (click)="toggleAvailability(item)">
+                    @if (item.isAvailable) {
+                      <lucide-icon [name]="powerOffIcon" size="16" class="inline mr-1"></lucide-icon>
+                      <span>Disable</span>
+                    } @else {
+                      <lucide-icon [name]="powerIcon" size="16" class="inline mr-1"></lucide-icon>
+                      <span>Enable</span>
+                    }
+                  </button>
+                  <button
+                    type="button"
+                    class="px-3 py-2 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95"
+                    (click)="openEditDialog(item)">
+                    <lucide-icon [name]="editIcon" size="16"></lucide-icon>
+                  </button>
+                  <button
+                    type="button"
+                    class="px-3 py-2 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 transition-all duration-200 active:scale-95"
+                    (click)="openDeleteModal(item)">
+                    <lucide-icon [name]="trashIcon" size="16"></lucide-icon>
+                  </button>
+                </div>
+              </div>
+            </div>
+          }
+        </div>
+      }
+
+      <!-- List View -->
+      @else {
+        <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark overflow-hidden">
+          <div class="divide-y divide-border-light dark:divide-border-dark">
+            @for (item of filteredItems(); track item.id) {
+              <div class="p-4 md:p-6 hover:bg-bg-light dark:hover:bg-bg-dark transition-colors duration-200">
+                <div class="flex items-center gap-4">
+                  <!-- Image -->
+                  <div class="relative w-20 h-20 md:w-24 md:h-24 flex-shrink-0 rounded-xl overflow-hidden bg-bg-light dark:bg-bg-dark">
+                    <img
+                      [src]="item.imageUrl || 'assets/placeholder-food.jpg'"
+                      [alt]="item.name"
+                      class="w-full h-full object-cover">
+                    @if (!item.isAvailable) {
+                      <div class="absolute inset-0 bg-black/60"></div>
+                    }
+                  </div>
+
+                  <!-- Info -->
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-start justify-between gap-4 mb-2">
+                      <div class="flex-1 min-w-0">
+                        <h3 class="text-lg md:text-xl font-semibold text-text-primary-light dark:text-text-primary-dark leading-tight mb-1">
+                          {{ item.name }}
+                        </h3>
+                        <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-2">{{ item.category }}</p>
+                        <p class="text-xl font-bold text-primary">RM {{ item.price.toFixed(2) }}</p>
+                      </div>
+                      <span
+                        [ngClass]="{
+                          'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700': item.isAvailable,
+                          'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700': !item.isAvailable
+                        }"
+                        class="flex-shrink-0 px-3 py-1 rounded-full text-xs font-medium border">
+                        {{ item.isAvailable ? 'Available' : 'Unavailable' }}
+                      </span>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="flex items-center gap-2 mt-4">
+                      <button
+                        type="button"
+                        class="px-4 py-2 rounded-xl text-sm font-medium transition-all duration-200 active:scale-95 flex items-center gap-2"
+                        [ngClass]="{
+                          'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-200 dark:hover:bg-yellow-900/50': item.isAvailable,
+                          'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/50': !item.isAvailable
+                        }"
+                        (click)="toggleAvailability(item)">
+                        @if (item.isAvailable) {
+                          <lucide-icon [name]="powerOffIcon" size="16"></lucide-icon>
+                          <span>Disable</span>
+                        } @else {
+                          <lucide-icon [name]="powerIcon" size="16"></lucide-icon>
+                          <span>Enable</span>
+                        }
+                      </button>
+                      <button
+                        type="button"
+                        class="px-4 py-2 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95 flex items-center gap-2"
+                        (click)="openEditDialog(item)">
+                        <lucide-icon [name]="editIcon" size="16"></lucide-icon>
+                        <span>Edit</span>
+                      </button>
+                      <button
+                        type="button"
+                        class="px-4 py-2 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 transition-all duration-200 active:scale-95 flex items-center gap-2"
+                        (click)="openDeleteModal(item)">
+                        <lucide-icon [name]="trashIcon" size="16"></lucide-icon>
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            }
+          </div>
+        </div>
+      }
     }
   }
-</div>
 
+  <!-- Delete Confirmation Modal -->
+  @if (showDeleteModal() && itemToDelete()) {
+    <div
+      class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
+      (click)="closeDeleteModal()"
+      role="dialog"
+      aria-modal="true">
+      <div
+        class="w-full max-w-md bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-hidden flex flex-col z-50"
+        (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
+          <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">
+            Delete Menu Item
+          </h2>
+          <button
+            type="button"
+            class="p-2 rounded-xl hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95"
+            (click)="closeDeleteModal()">
+            <lucide-icon [name]="trashIcon" size="24" class="text-text-secondary-light dark:text-text-secondary-dark"></lucide-icon>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <p class="text-base text-text-primary-light dark:text-text-primary-dark leading-relaxed">
+            Are you sure you want to delete <strong>"{{ itemToDelete()!.name }}"</strong>? This action cannot be undone.
+          </p>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-border-light dark:border-border-dark">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95"
+            (click)="closeDeleteModal()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg"
+            (click)="confirmDelete()">
+            Delete Item
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>

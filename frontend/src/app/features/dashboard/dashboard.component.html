@@ -1,250 +1,270 @@
-<div class="dashboard-container">
-  <div class="dashboard-header">
-    <h1>Dashboard</h1>
-    <mat-form-field appearance="outline" class="period-selector">
-      <mat-label>Period</mat-label>
-      <mat-select [value]="selectedPeriod" (selectionChange)="onPeriodChange($event.value)">
-        <mat-option value="today">Today</mat-option>
-        <mat-option value="week">Last 7 Days</mat-option>
-        <mat-option value="month">This Month</mat-option>
-        <mat-option value="year">This Year</mat-option>
-      </mat-select>
-    </mat-form-field>
-  </div>
-
-  @if (isLoading && !stats) {
-    <div class="loading-container">
-      <mat-spinner></mat-spinner>
-      <p>Loading dashboard data...</p>
-    </div>
-  } @else if (hasError && !stats) {
-    <div class="error-container">
-      <mat-icon class="error-icon">error_outline</mat-icon>
-      <h2>Unable to Load Dashboard</h2>
-      <p>{{ errorMessage }}</p>
-      <button mat-raised-button color="primary" (click)="loadDashboardData()">
-        <mat-icon>refresh</mat-icon>
-        Retry
+<div class="p-4 md:p-6 space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+    <h1 class="text-2xl md:text-3xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">Dashboard</h1>
+    
+    <div class="flex items-center gap-3">
+      <select
+        [value]="selectedPeriod()"
+        (change)="onPeriodChange($any($event.target).value)"
+        class="px-4 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200">
+        <option value="today">Today</option>
+        <option value="week">Last 7 Days</option>
+        <option value="month">This Month</option>
+        <option value="year">This Year</option>
+      </select>
+      
+      <button
+        type="button"
+        class="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        (click)="loadDashboardData()"
+        [disabled]="isLoading()"
+        [attr.aria-label]="'Refresh dashboard'">
+        <lucide-icon [name]="refreshIcon" size="20" class="text-text-primary-light dark:text-text-primary-dark" [class.animate-spin]="isLoading()"></lucide-icon>
       </button>
     </div>
-  } @else {
-    <!-- Empty State Message -->
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading() && !stats) {
+    <div class="flex flex-col items-center justify-center py-24">
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent mb-4"></div>
+      <p class="text-text-secondary-light dark:text-text-secondary-dark">Loading dashboard data...</p>
+    </div>
+  }
+
+  <!-- Error State -->
+  @else if (hasError() && !stats) {
+    <div class="flex flex-col items-center justify-center py-24 text-center">
+      <div class="p-4 rounded-full bg-error/10 mb-4">
+        <lucide-icon [name]="alertCircleIcon" size="48" class="text-error"></lucide-icon>
+      </div>
+      <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark mb-2">Unable to Load Dashboard</h2>
+      <p class="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark mb-6 leading-relaxed">{{ errorMessage() }}</p>
+      <button
+        type="button"
+        class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md hover:shadow-lg"
+        (click)="loadDashboardData()">
+        <lucide-icon [name]="refreshIcon" size="20"></lucide-icon>
+        <span>Retry</span>
+      </button>
+    </div>
+  }
+
+  <!-- Dashboard Content -->
+  @else {
+    <!-- Empty State -->
     @if (isEmpty) {
-      <div class="empty-state-container">
-        <mat-card class="empty-state-card">
-          <mat-card-content>
-            <div class="empty-state-content">
-              <mat-icon class="empty-state-icon">dashboard</mat-icon>
-              <h2>Welcome to Your Dashboard!</h2>
-              <p>Your dashboard is empty because you haven't created any orders yet.</p>
-              <p class="empty-state-hint">Get started by:</p>
-              <ul class="empty-state-actions">
-                @if (isManager || isAdmin) {
-                  <li>
-                    <mat-icon>restaurant_menu</mat-icon>
-                    <span>Add menu items to your catalog</span>
-                  </li>
-                }
-                @if (isManager || isWaiter) {
-                  <li>
-                    <mat-icon>add_shopping_cart</mat-icon>
-                    <span>Create your first order</span>
-                  </li>
-                }
-                @if (isAdmin || isSuperAdmin) {
-                  <li>
-                    <mat-icon>people</mat-icon>
-                    <span>Add users to your team</span>
-                  </li>
-                }
-                @if (isAdmin || isSuperAdmin) {
-                  <li>
-                    <mat-icon>store</mat-icon>
-                    <span>Set up additional branches</span>
-                  </li>
-                }
-              </ul>
-              <div class="empty-state-buttons">
-                @if (isManager || isWaiter) {
-                  <button mat-raised-button color="primary" routerLink="/orders/create">
-                    <mat-icon>add_shopping_cart</mat-icon>
-                    Create First Order
-                  </button>
-                }
-                @if (isManager || isAdmin) {
-                  <button mat-raised-button routerLink="/menu">
-                    <mat-icon>restaurant_menu</mat-icon>
-                    Manage Menu
-                  </button>
-                }
-              </div>
-            </div>
-          </mat-card-content>
-        </mat-card>
+      <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-8 md:p-12">
+        <div class="flex flex-col items-center justify-center text-center space-y-6">
+          <div class="p-6 rounded-full bg-primary/10 dark:bg-primary/20">
+            <lucide-icon [name]="dashboardIcon" size="64" class="text-primary"></lucide-icon>
+          </div>
+          <div class="space-y-2">
+            <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">Welcome to Your Dashboard!</h2>
+            <p class="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark max-w-md leading-relaxed">
+              Your dashboard is empty because you haven't created any orders yet.
+            </p>
+          </div>
+          <div class="space-y-4 w-full max-w-md">
+            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">Get started by:</p>
+            <ul class="space-y-3 text-left">
+              @if (isManager || isAdmin) {
+                <li class="flex items-center gap-3 text-text-secondary-light dark:text-text-secondary-dark">
+                  <lucide-icon [name]="utensilsIcon" size="20" class="text-primary"></lucide-icon>
+                  <span>Add menu items to your catalog</span>
+                </li>
+              }
+              @if (isManager || isWaiter) {
+                <li class="flex items-center gap-3 text-text-secondary-light dark:text-text-secondary-dark">
+                  <lucide-icon [name]="shoppingCartIcon" size="20" class="text-primary"></lucide-icon>
+                  <span>Create your first order</span>
+                </li>
+              }
+              @if (isAdmin || isSuperAdmin) {
+                <li class="flex items-center gap-3 text-text-secondary-light dark:text-text-secondary-dark">
+                  <lucide-icon [name]="usersIcon" size="20" class="text-primary"></lucide-icon>
+                  <span>Add users to your team</span>
+                </li>
+              }
+              @if (isAdmin || isSuperAdmin) {
+                <li class="flex items-center gap-3 text-text-secondary-light dark:text-text-secondary-dark">
+                  <lucide-icon [name]="buildingIcon" size="20" class="text-primary"></lucide-icon>
+                  <span>Set up additional branches</span>
+                </li>
+              }
+            </ul>
+          </div>
+          <div class="flex flex-wrap gap-3 justify-center">
+            @if (isManager || isWaiter) {
+              <a
+                routerLink="/orders/create"
+                class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md hover:shadow-lg">
+                <lucide-icon [name]="shoppingCartIcon" size="20"></lucide-icon>
+                <span>Create First Order</span>
+              </a>
+            }
+            @if (isManager || isAdmin) {
+              <a
+                routerLink="/menu"
+                class="px-6 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark font-semibold transition-all active:scale-95 flex items-center gap-2">
+                <lucide-icon [name]="utensilsIcon" size="20"></lucide-icon>
+                <span>Manage Menu</span>
+              </a>
+            }
+          </div>
+        </div>
       </div>
     }
 
-    <!-- Stat Cards -->
-    <mat-grid-list cols="4" rowHeight="150px" gutterSize="16px" class="stats-grid">
+    <!-- Stats Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
       @for (stat of statCards; track stat.title) {
-        <mat-grid-tile>
-          <mat-card class="stat-card" [routerLink]="stat.route" [style.cursor]="stat.route ? 'pointer' : 'default'">
-            <mat-card-content>
-              <div class="stat-content">
-                <div class="stat-icon" [style.background-color]="stat.color + '20'">
-                  <mat-icon [style.color]="stat.color">{{ stat.icon }}</mat-icon>
-                </div>
-                <div class="stat-info">
-                  <div class="stat-value">{{ stat.value }}</div>
-                  <div class="stat-title">{{ stat.title }}</div>
-                </div>
-              </div>
-            </mat-card-content>
-          </mat-card>
-        </mat-grid-tile>
+        <a
+          [routerLink]="stat.route || null"
+          [class.cursor-pointer]="stat.route"
+          [class.cursor-default]="!stat.route"
+          class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 p-6"
+          [class.hover:scale-105]="stat.route">
+          <div class="flex items-center gap-4">
+            <div class="p-3 rounded-xl" [style.background-color]="stat.color + '20'">
+              <lucide-icon [name]="getIconForStat(stat.icon)" size="24" [style.color]="stat.color"></lucide-icon>
+            </div>
+            <div class="flex-1 min-w-0">
+              <p class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark mb-1 truncate">
+                {{ stat.value }}
+              </p>
+              <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark truncate">
+                {{ stat.title }}
+              </p>
+            </div>
+          </div>
+        </a>
       }
-    </mat-grid-list>
+    </div>
 
     <!-- Charts Section -->
     @if (isManager || isAdmin) {
-      <div class="charts-section">
-        <h2>Analytics</h2>
+      <div class="space-y-6">
+        <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">Analytics</h2>
         
-        <mat-grid-list cols="2" rowHeight="350px" gutterSize="16px" class="charts-grid">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Sales Trend Chart -->
           @if (salesTrend && salesTrend.length > 0) {
-            <mat-grid-tile>
-              <mat-card>
-                <mat-card-content>
-                  <app-sales-trend-chart [data]="salesTrend" title="Sales Trend (Last 7 Days)"></app-sales-trend-chart>
-                </mat-card-content>
-              </mat-card>
-            </mat-grid-tile>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-6">
+              <app-sales-trend-chart [data]="salesTrend" title="Sales Trend (Last 7 Days)"></app-sales-trend-chart>
+            </div>
           }
 
           <!-- Orders by Status Pie Chart -->
           @if (statusChartData && statusChartData.length > 0) {
-            <mat-grid-tile>
-              <mat-card>
-                <mat-card-content>
-                  <app-pie-chart [data]="statusChartData" title="Orders by Status" [chartType]="'pie'"></app-pie-chart>
-                </mat-card-content>
-              </mat-card>
-            </mat-grid-tile>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-6">
+              <app-pie-chart [data]="statusChartData" title="Orders by Status" [chartType]="'pie'"></app-pie-chart>
+            </div>
           }
 
           <!-- Top Selling Items -->
           @if (topItemsChartData && topItemsChartData.length > 0) {
-            <mat-grid-tile>
-              <mat-card>
-                <mat-card-content>
-                  <app-bar-chart [data]="topItemsChartData" title="Top Selling Items" [orientation]="'horizontal'" [yAxisLabel]="'Quantity'"></app-bar-chart>
-                </mat-card-content>
-              </mat-card>
-            </mat-grid-tile>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-6">
+              <app-bar-chart [data]="topItemsChartData" title="Top Selling Items" [orientation]="'horizontal'" [yAxisLabel]="'Quantity'"></app-bar-chart>
+            </div>
           }
 
           <!-- Orders by Hour -->
           @if (hourlyChartData && hourlyChartData.length > 0) {
-            <mat-grid-tile>
-              <mat-card>
-                <mat-card-content>
-                  <app-bar-chart [data]="hourlyChartData" title="Orders by Hour (Today)" [orientation]="'vertical'"></app-bar-chart>
-                </mat-card-content>
-              </mat-card>
-            </mat-grid-tile>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-6">
+              <app-bar-chart [data]="hourlyChartData" title="Orders by Hour (Today)" [orientation]="'vertical'"></app-bar-chart>
+            </div>
           }
-        </mat-grid-list>
+        </div>
       </div>
     }
 
     <!-- SuperAdmin Analytics -->
     @if (isSuperAdmin) {
-      <div class="charts-section">
-        <h2>Subscription Analytics</h2>
+      <div class="space-y-6">
+        <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">Subscription Analytics</h2>
         
-        <mat-grid-list cols="2" rowHeight="350px" gutterSize="16px" class="charts-grid">
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <!-- Subscription Status Breakdown -->
           @if (subscriptionStatusData && subscriptionStatusData.length > 0) {
-            <mat-grid-tile>
-              <mat-card>
-                <mat-card-content>
-                  <app-pie-chart [data]="subscriptionStatusData" title="Subscription Status Breakdown" [chartType]="'pie'"></app-pie-chart>
-                </mat-card-content>
-              </mat-card>
-            </mat-grid-tile>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-6">
+              <app-pie-chart [data]="subscriptionStatusData" title="Subscription Status Breakdown" [chartType]="'pie'"></app-pie-chart>
+            </div>
           }
 
           <!-- Subscription Trend -->
           @if (subscriptionTrendData && subscriptionTrendData.length > 0) {
-            <mat-grid-tile>
-              <mat-card>
-                <mat-card-content>
-                  <app-bar-chart [data]="subscriptionTrendData" title="Subscription Trend (Last 6 Months)" [orientation]="'vertical'" [yAxisLabel]="'New Subscriptions'"></app-bar-chart>
-                </mat-card-content>
-              </mat-card>
-            </mat-grid-tile>
+            <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-6">
+              <app-bar-chart [data]="subscriptionTrendData" title="Subscription Trend (Last 6 Months)" [orientation]="'vertical'" [yAxisLabel]="'New Subscriptions'"></app-bar-chart>
+            </div>
           }
-        </mat-grid-list>
+        </div>
       </div>
     }
 
     <!-- Kitchen Dashboard -->
     @if (isKitchen) {
-      <div class="charts-section">
-        <h2>Kitchen Analytics</h2>
+      <div class="space-y-6">
+        <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">Kitchen Analytics</h2>
         
         @if (statusChartData && statusChartData.length > 0) {
-          <mat-grid-list cols="1" rowHeight="350px" gutterSize="16px" class="charts-grid">
-            <mat-grid-tile>
-              <mat-card>
-                <mat-card-content>
-                  <app-pie-chart [data]="statusChartData" title="Orders by Status" [chartType]="'doughnut'"></app-pie-chart>
-                </mat-card-content>
-              </mat-card>
-            </mat-grid-tile>
-          </mat-grid-list>
+          <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-6">
+            <app-pie-chart [data]="statusChartData" title="Orders by Status" [chartType]="'doughnut'"></app-pie-chart>
+          </div>
         }
       </div>
     }
 
     <!-- Quick Actions -->
-    <div class="quick-actions">
-      <h2>Quick Actions</h2>
-      <div class="actions-grid">
+    <div class="space-y-4">
+      <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">Quick Actions</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
         @if (isSuperAdmin) {
-          <button mat-raised-button color="primary" routerLink="/tenants">
-            <mat-icon>business</mat-icon>
+          <a
+            routerLink="/tenants"
+            class="px-6 py-4 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl">
+            <lucide-icon [name]="buildingIcon" size="20"></lucide-icon>
             <span>Tenant Management</span>
-          </button>
-          <button mat-raised-button routerLink="/tenants">
-            <mat-icon>subscriptions</mat-icon>
+          </a>
+          <a
+            routerLink="/tenants"
+            class="px-6 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <lucide-icon [name]="creditCardIcon" size="20"></lucide-icon>
             <span>Subscriptions</span>
-          </button>
+          </a>
         }
         @if (isManager || isWaiter) {
-          <button mat-raised-button color="primary" routerLink="/orders/create">
-            <mat-icon>add_shopping_cart</mat-icon>
+          <a
+            routerLink="/orders/create"
+            class="px-6 py-4 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all active:scale-95 flex items-center justify-center gap-2 shadow-lg hover:shadow-xl">
+            <lucide-icon [name]="shoppingCartIcon" size="20"></lucide-icon>
             <span>New Order</span>
-          </button>
+          </a>
         }
         @if (isManager || isAdmin) {
-          <button mat-raised-button routerLink="/menu">
-            <mat-icon>restaurant_menu</mat-icon>
+          <a
+            routerLink="/menu"
+            class="px-6 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <lucide-icon [name]="utensilsIcon" size="20"></lucide-icon>
             <span>Manage Menu</span>
-          </button>
+          </a>
         }
         @if (isKitchen || isManager) {
-          <button mat-raised-button routerLink="/kitchen">
-            <mat-icon>kitchen</mat-icon>
+          <a
+            routerLink="/kitchen"
+            class="px-6 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <lucide-icon [name]="chefHatIcon" size="20"></lucide-icon>
             <span>Kitchen Display</span>
-          </button>
+          </a>
         }
         @if (!isSuperAdmin) {
-          <button mat-raised-button routerLink="/tables">
-            <mat-icon>table_restaurant</mat-icon>
+          <a
+            routerLink="/tables"
+            class="px-6 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2">
+            <lucide-icon [name]="tableIcon" size="20"></lucide-icon>
             <span>Table Management</span>
-          </button>
+          </a>
         }
       </div>
     </div>

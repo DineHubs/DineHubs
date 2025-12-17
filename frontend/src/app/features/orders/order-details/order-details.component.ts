@@ -1,21 +1,11 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatDialog, MatDialogModule } from '@angular/material/dialog';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { FormsModule } from '@angular/forms';
+import { LucideAngularModule, ArrowLeft, X, Trash2, CreditCard, Receipt, Printer, FileText, CheckCircle2, ChefHat, Clock, Truck, XCircle, Plus, Minus, AlertCircle } from 'lucide-angular';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
-import { Order, OrderStatus, CancelOrderRequest, UpdateOrderLineRequest, Payment, ProcessPaymentRequest, ReprintReceiptRequest } from '../../../core/models/order.model';
-import { CancelOrderDialogComponent } from './cancel-order-dialog.component';
-import { ReprintReceiptDialogComponent } from './reprint-receipt-dialog.component';
+import { ToastService } from '../../../core/services/toast.service';
+import { Order, OrderStatus, CancelOrderRequest, UpdateOrderLineRequest, Payment, ReprintReceiptRequest } from '../../../core/models/order.model';
 
 @Component({
   selector: 'app-order-details',
@@ -23,16 +13,7 @@ import { ReprintReceiptDialogComponent } from './reprint-receipt-dialog.componen
   imports: [
     CommonModule,
     RouterModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatSnackBarModule,
-    MatDialogModule,
-    MatFormFieldModule,
-    MatInputModule,
-    MatChipsModule,
-    MatProgressSpinnerModule,
-    FormsModule
+    LucideAngularModule
   ],
   templateUrl: './order-details.component.html',
   styleUrl: './order-details.component.scss'
@@ -42,20 +23,40 @@ export class OrderDetailsComponent implements OnInit {
   private apiService = inject(ApiService);
   private authService = inject(AuthService);
   private router = inject(Router);
-  private snackBar = inject(MatSnackBar);
-  private dialog = inject(MatDialog);
+  private toastService = inject(ToastService);
 
-  order: Order | null = null;
-  payment: Payment | null = null;
-  receiptUrl: string | null = null;
+  order = signal<Order | null>(null);
+  payment = signal<Payment | null>(null);
+  receiptUrl = signal<string | null>(null);
+  
+  // Modal states
+  showCancelModal = signal<boolean>(false);
+  showReprintModal = signal<boolean>(false);
+  cancelReason = signal<string>('');
+  reprintReason = signal<string>('');
+
+  // Icons
+  arrowLeftIcon = ArrowLeft;
+  xIcon = X;
+  trashIcon = Trash2;
+  creditCardIcon = CreditCard;
+  receiptIcon = Receipt;
+  printerIcon = Printer;
+  fileTextIcon = FileText;
+  checkCircleIcon = CheckCircle2;
+  chefHatIcon = ChefHat;
+  clockIcon = Clock;
+  truckIcon = Truck;
+  xCircleIcon = XCircle;
+  plusIcon = Plus;
+  minusIcon = Minus;
+  alertCircleIcon = AlertCircle;
 
   ngOnInit(): void {
-    // Access control handled by route guard
     const id = this.route.snapshot.paramMap.get('id');
     if (id && id !== 'active') {
       this.loadOrder(id);
     } else if (id === 'active') {
-      // Redirect to orders list if "active" is used as ID
       this.router.navigate(['/orders']);
     }
   }
@@ -63,13 +64,13 @@ export class OrderDetailsComponent implements OnInit {
   loadOrder(id: string): void {
     this.apiService.get<Order>(`Orders/${id}`).subscribe({
       next: (order) => {
-        this.order = order;
+        this.order.set(order);
         this.loadPayment(id);
         this.loadReceipt(id);
       },
       error: (error) => {
         console.error('Error loading order:', error);
-        this.snackBar.open('Failed to load order', 'Close', { duration: 3000 });
+        this.toastService.error('Failed to load order');
       }
     });
   }
@@ -77,10 +78,9 @@ export class OrderDetailsComponent implements OnInit {
   loadPayment(orderId: string): void {
     this.apiService.get<Payment>(`Payments/orders/${orderId}`).subscribe({
       next: (payment) => {
-        this.payment = payment;
+        this.payment.set(payment);
       },
       error: (error) => {
-        // Payment might not exist yet, which is fine
         if (error.status !== 404) {
           console.error('Error loading payment:', error);
         }
@@ -91,10 +91,9 @@ export class OrderDetailsComponent implements OnInit {
   loadReceipt(orderId: string): void {
     this.apiService.get<{ receiptUrl: string }>(`Receipts/orders/${orderId}`).subscribe({
       next: (response) => {
-        this.receiptUrl = response.receiptUrl;
+        this.receiptUrl.set(response.receiptUrl);
       },
       error: (error) => {
-        // Receipt might not exist yet, which is fine
         if (error.status !== 404) {
           console.error('Error loading receipt:', error);
         }
@@ -103,112 +102,125 @@ export class OrderDetailsComponent implements OnInit {
   }
 
   canCancel(): boolean {
-    if (!this.order) return false;
-    const status = typeof this.order.status === 'number' ? this.order.status : this.order.status;
+    const order = this.order();
+    if (!order) return false;
+    const status = typeof order.status === 'number' ? order.status : order.status;
     return status < OrderStatus.InPreparation && status !== OrderStatus.Cancelled && status !== OrderStatus.Paid;
   }
 
   canModifyLines(): boolean {
-    if (!this.order) return false;
-    const status = typeof this.order.status === 'number' ? this.order.status : this.order.status;
+    const order = this.order();
+    if (!order) return false;
+    const status = typeof order.status === 'number' ? order.status : order.status;
     return status < OrderStatus.InPreparation;
   }
 
-  cancelOrder(): void {
-    if (!this.order) return;
+  openCancelModal(): void {
+    this.cancelReason.set('');
+    this.showCancelModal.set(true);
+  }
 
-    const dialogRef = this.dialog.open(CancelOrderDialogComponent, {
-      width: '400px',
-      data: { orderNumber: this.order.orderNumber }
-    });
+  closeCancelModal(): void {
+    this.showCancelModal.set(false);
+    this.cancelReason.set('');
+  }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result && result.reason) {
-        const request: CancelOrderRequest = { reason: result.reason };
-        this.apiService.post(`Orders/${this.order!.id}/cancel`, request).subscribe({
-          next: () => {
-            this.snackBar.open('Order cancelled successfully', 'Close', { duration: 3000 });
-            this.loadOrder(this.order!.id);
-            this.router.navigate(['/orders']);
-          },
-          error: (error) => {
-            console.error('Error cancelling order:', error);
-            const errorMessage = error.error?.message || 'Failed to cancel order';
-            this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
-          }
-        });
+  confirmCancel(): void {
+    const order = this.order();
+    if (!order || !this.cancelReason().trim()) return;
+
+    const request: CancelOrderRequest = { reason: this.cancelReason().trim() };
+    this.apiService.post(`Orders/${order.id}/cancel`, request).subscribe({
+      next: () => {
+        this.toastService.success('Order cancelled successfully');
+        this.closeCancelModal();
+        this.loadOrder(order.id);
+        setTimeout(() => {
+          this.router.navigate(['/orders']);
+        }, 1000);
+      },
+      error: (error) => {
+        console.error('Error cancelling order:', error);
+        const errorMessage = error.error?.message || 'Failed to cancel order';
+        this.toastService.error(errorMessage);
       }
     });
   }
 
   removeLine(lineId: string): void {
-    if (!this.order || !lineId) return;
+    const order = this.order();
+    if (!order || !lineId) return;
 
     if (!confirm('Are you sure you want to remove this item from the order?')) {
       return;
     }
 
-    this.apiService.delete(`Orders/${this.order.id}/lines/${lineId}`).subscribe({
+    this.apiService.delete(`Orders/${order.id}/lines/${lineId}`).subscribe({
       next: () => {
-        this.snackBar.open('Item removed successfully', 'Close', { duration: 3000 });
-        this.loadOrder(this.order!.id);
+        this.toastService.success('Item removed successfully');
+        this.loadOrder(order.id);
       },
       error: (error) => {
         console.error('Error removing line:', error);
         const errorMessage = error.error?.message || 'Failed to remove item';
-        this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+        this.toastService.error(errorMessage);
       }
     });
   }
 
   updateLineQuantity(lineId: string, newQuantity: number): void {
-    if (!this.order || !lineId || newQuantity <= 0) return;
+    const order = this.order();
+    if (!order || !lineId || newQuantity <= 0) return;
 
     const request: UpdateOrderLineRequest = { quantity: newQuantity };
-    this.apiService.patch(`Orders/${this.order.id}/lines/${lineId}`, request).subscribe({
+    this.apiService.patch(`Orders/${order.id}/lines/${lineId}`, request).subscribe({
       next: () => {
-        this.snackBar.open('Quantity updated successfully', 'Close', { duration: 3000 });
-        this.loadOrder(this.order!.id);
+        this.toastService.success('Quantity updated successfully');
+        this.loadOrder(order.id);
       },
       error: (error) => {
         console.error('Error updating quantity:', error);
         const errorMessage = error.error?.message || 'Failed to update quantity';
-        this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
+        this.toastService.error(errorMessage);
       }
     });
   }
 
   viewReceipt(): void {
-    if (!this.receiptUrl) {
-      this.snackBar.open('Receipt not available', 'Close', { duration: 3000 });
+    const url = this.receiptUrl();
+    if (!url) {
+      this.toastService.error('Receipt not available');
       return;
     }
-    window.open(this.receiptUrl, '_blank');
+    window.open(url, '_blank');
   }
 
-  reprintReceipt(): void {
-    if (!this.order) return;
+  openReprintModal(): void {
+    this.reprintReason.set('');
+    this.showReprintModal.set(true);
+  }
 
-    const dialogRef = this.dialog.open(ReprintReceiptDialogComponent, {
-      width: '400px',
-      data: { orderNumber: this.order.orderNumber }
-    });
+  closeReprintModal(): void {
+    this.showReprintModal.set(false);
+    this.reprintReason.set('');
+  }
 
-    dialogRef.afterClosed().subscribe(result => {
-      if (result && result.reason) {
-        const request: ReprintReceiptRequest = { reason: result.reason };
-        this.apiService.post<{ receiptUrl: string }>(`Receipts/orders/${this.order!.id}/reprint`, request).subscribe({
-          next: (response) => {
-            this.receiptUrl = response.receiptUrl;
-            this.snackBar.open('Receipt reprinted successfully', 'Close', { duration: 3000 });
-            window.open(response.receiptUrl, '_blank');
-          },
-          error: (error) => {
-            console.error('Error reprinting receipt:', error);
-            const errorMessage = error.error?.message || 'Failed to reprint receipt';
-            this.snackBar.open(errorMessage, 'Close', { duration: 5000 });
-          }
-        });
+  confirmReprint(): void {
+    const order = this.order();
+    if (!order || !this.reprintReason().trim()) return;
+
+    const request: ReprintReceiptRequest = { reason: this.reprintReason().trim() };
+    this.apiService.post<{ receiptUrl: string }>(`Receipts/orders/${order.id}/reprint`, request).subscribe({
+      next: (response) => {
+        this.receiptUrl.set(response.receiptUrl);
+        this.toastService.success('Receipt reprinted successfully');
+        this.closeReprintModal();
+        window.open(response.receiptUrl, '_blank');
+      },
+      error: (error) => {
+        console.error('Error reprinting receipt:', error);
+        const errorMessage = error.error?.message || 'Failed to reprint receipt';
+        this.toastService.error(errorMessage);
       }
     });
   }
@@ -226,22 +238,47 @@ export class OrderDetailsComponent implements OnInit {
     return statusMap[status] || 'Unknown';
   }
 
+  getStatusIcon(status: number | OrderStatus) {
+    const statusNum = typeof status === 'number' ? status : status;
+    const icons: Record<number, any> = {
+      [OrderStatus.Draft]: this.fileTextIcon,
+      [OrderStatus.Submitted]: this.checkCircleIcon,
+      [OrderStatus.InPreparation]: this.chefHatIcon,
+      [OrderStatus.Ready]: this.clockIcon,
+      [OrderStatus.Delivered]: this.truckIcon,
+      [OrderStatus.Cancelled]: this.xCircleIcon,
+      [OrderStatus.Paid]: this.creditCardIcon
+    };
+    return icons[statusNum] || this.fileTextIcon;
+  }
+
+  getStatusBadgeClasses(status: number | OrderStatus): string {
+    const statusNum = typeof status === 'number' ? status : status;
+    const classes: Record<number, string> = {
+      [OrderStatus.Draft]: 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 border-gray-200 dark:border-gray-700',
+      [OrderStatus.Submitted]: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-700',
+      [OrderStatus.InPreparation]: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 border-orange-200 dark:border-orange-700',
+      [OrderStatus.Ready]: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 border-green-200 dark:border-green-700',
+      [OrderStatus.Delivered]: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-200 dark:border-purple-700',
+      [OrderStatus.Cancelled]: 'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 border-red-200 dark:border-red-700',
+      [OrderStatus.Paid]: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-700'
+    };
+    return classes[statusNum] || 'bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300';
+  }
+
   get OrderStatus() {
     return OrderStatus;
   }
 
-  getStatusColor(status: number | OrderStatus): string {
-    const statusNum = typeof status === 'number' ? status : status;
-    const colors: Record<number, string> = {
-      [OrderStatus.Draft]: '',
-      [OrderStatus.Submitted]: 'primary',
-      [OrderStatus.InPreparation]: 'accent',
-      [OrderStatus.Ready]: 'warn',
-      [OrderStatus.Delivered]: '',
-      [OrderStatus.Cancelled]: 'warn',
-      [OrderStatus.Paid]: 'primary'
-    };
-    return colors[statusNum] || '';
+  formatDate(dateString: string): string {
+    const date = new Date(dateString);
+    return new Intl.DateTimeFormat('en-US', {
+      month: '2-digit',
+      day: '2-digit',
+      year: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    }).format(date);
   }
 }
-

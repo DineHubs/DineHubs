@@ -1,75 +1,321 @@
-<div class="order-list-container">
-  <div class="header">
-    <h1>Orders</h1>
-    <div class="header-actions">
-      <button mat-icon-button (click)="loadOrders()" [disabled]="isLoading" title="Refresh">
-        <mat-icon>refresh</mat-icon>
+<div class="min-h-screen bg-bg-light dark:bg-bg-dark p-4 md:p-6">
+  <!-- Header -->
+  <div class="mb-6 flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+    <h1 class="text-2xl md:text-3xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">
+      Orders
+    </h1>
+    
+    <div class="flex items-center gap-3 w-full sm:w-auto">
+      <!-- Refresh Button -->
+      <button
+        type="button"
+        class="min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+        (click)="loadOrders()"
+        [disabled]="isLoading()"
+        [attr.aria-label]="'Refresh orders'">
+        <lucide-icon 
+          [name]="refreshIcon" 
+          size="20" 
+          [class.animate-spin]="isLoading()"
+          class="text-text-primary-light dark:text-text-primary-dark">
+        </lucide-icon>
       </button>
-      <button mat-raised-button color="primary" routerLink="/orders/create">
-        <mat-icon>add</mat-icon>
+
+      <!-- New Order Button -->
+      <a
+        routerLink="/orders/create"
+        class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 flex items-center gap-2 shadow-md hover:shadow-lg">
+        <lucide-icon [name]="plusIcon" size="18"></lucide-icon>
         <span>New Order</span>
-      </button>
+      </a>
     </div>
   </div>
 
-  @if (isLoading && orders.length === 0) {
-    <div class="loading">
-      <mat-spinner></mat-spinner>
-    </div>
-  } @else {
-    <mat-card>
-      @if (orders.length === 0) {
-        <div class="empty-state">
-          <mat-icon>shopping_cart</mat-icon>
-          <p>No orders found</p>
-          <button mat-raised-button color="primary" routerLink="/orders/create">
-            <mat-icon>add</mat-icon>
-            Create First Order
-          </button>
-        </div>
-      } @else {
-        <table mat-table [dataSource]="orders" class="orders-table">
-          <ng-container matColumnDef="orderNumber">
-            <th mat-header-cell *matHeaderCellDef>Order Number</th>
-            <td mat-cell *matCellDef="let order">{{ order.orderNumber }}</td>
-          </ng-container>
+  <!-- Filters -->
+  <div class="mb-6 bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark p-4 md:p-6">
+    <div class="flex flex-col md:flex-row gap-4 items-start md:items-center">
+      <!-- Search -->
+      <div class="relative flex-1 w-full md:w-auto md:min-w-[300px]">
+        <lucide-icon [name]="searchIcon" size="20" class="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark"></lucide-icon>
+        <input
+          type="text"
+          [value]="searchTerm()"
+          (input)="onSearchChange($any($event.target).value)"
+          placeholder="Search by order number or table..."
+          class="w-full pl-10 pr-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200">
+      </div>
 
-          <ng-container matColumnDef="tableNumber">
-            <th mat-header-cell *matHeaderCellDef>Table</th>
-            <td mat-cell *matCellDef="let order">{{ order.tableNumber || 'Take Away' }}</td>
-          </ng-container>
+      <!-- Status Filter -->
+      <div class="w-full md:w-auto">
+        <select
+          [value]="statusFilter() === null ? '' : statusFilter()"
+          (change)="onStatusFilterChange($any($event.target).value === '' ? null : +$any($event.target).value)"
+          class="w-full md:w-[200px] px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 appearance-none cursor-pointer">
+          @for (option of statusOptions; track option.value) {
+            <option [value]="option.value === null ? '' : option.value">{{ option.label }}</option>
+          }
+        </select>
+      </div>
 
-          <ng-container matColumnDef="status">
-            <th mat-header-cell *matHeaderCellDef>Status</th>
-            <td mat-cell *matCellDef="let order">
-              <mat-chip [color]="getStatusColor(order.status)">{{ getStatusText(order.status) }}</mat-chip>
-            </td>
-          </ng-container>
+      <!-- Table Type Filter -->
+      <div class="w-full md:w-auto">
+        <select
+          [value]="tableFilter()"
+          (change)="onTableFilterChange($any($event.target).value)"
+          class="w-full md:w-[180px] px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 appearance-none cursor-pointer">
+          <option value="all">All Orders</option>
+          <option value="table">Table Orders</option>
+          <option value="takeaway">Take Away</option>
+        </select>
+      </div>
 
-          <ng-container matColumnDef="total">
-            <th mat-header-cell *matHeaderCellDef>Total</th>
-            <td mat-cell *matCellDef="let order">RM {{ order.total.toFixed(2) }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="createdAt">
-            <th mat-header-cell *matHeaderCellDef>Created</th>
-            <td mat-cell *matCellDef="let order">{{ order.createdAt | date:'short' }}</td>
-          </ng-container>
-
-          <ng-container matColumnDef="actions">
-            <th mat-header-cell *matHeaderCellDef>Actions</th>
-            <td mat-cell *matCellDef="let order">
-              <button mat-icon-button [routerLink]="['/orders', order.id]">
-                <mat-icon>visibility</mat-icon>
-              </button>
-            </td>
-          </ng-container>
-
-          <tr mat-header-row *matHeaderRowDef="displayedColumns"></tr>
-          <tr mat-row *matRowDef="let row; columns: displayedColumns;"></tr>
-        </table>
+      <!-- Clear Filters Button -->
+      @if (hasActiveFilters()) {
+        <button
+          type="button"
+          class="px-6 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          (click)="clearFilters()">
+          <lucide-icon [name]="xIcon" size="18"></lucide-icon>
+          <span>Clear</span>
+        </button>
       }
-    </mat-card>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading() && allOrders().length === 0) {
+    <div class="flex items-center justify-center py-24">
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+    </div>
+  }
+
+  <!-- Empty State -->
+  @else if (filteredOrders().length === 0 && !isLoading()) {
+    <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-6 md:p-12">
+      <div class="flex flex-col items-center justify-center text-center space-y-6">
+        <div class="p-6 rounded-full bg-primary/10 dark:bg-primary/20">
+          <lucide-icon [name]="shoppingCartIcon" size="64" class="text-primary"></lucide-icon>
+        </div>
+        <div class="space-y-2">
+          <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">
+            @if (hasActiveFilters()) {
+              No orders match your filters
+            } @else {
+              No orders found
+            }
+          </h2>
+          <p class="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark max-w-md leading-relaxed">
+            @if (hasActiveFilters()) {
+              Try adjusting your filters or create a new order.
+            } @else {
+              Get started by creating your first order.
+            }
+          </p>
+        </div>
+        @if (hasActiveFilters()) {
+          <button
+            type="button"
+            class="px-6 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark font-semibold transition-all duration-200 active:scale-95"
+            (click)="clearFilters()">
+            Clear Filters
+          </button>
+        } @else {
+          <a
+            routerLink="/orders/create"
+            class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-150 active:scale-95 flex items-center gap-2 shadow-md hover:shadow-lg">
+            <lucide-icon [name]="plusIcon" size="18"></lucide-icon>
+            <span>Create First Order</span>
+          </a>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- Orders Table -->
+  @else {
+    <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg overflow-hidden border border-border-light dark:border-border-dark">
+      <!-- Desktop Table View -->
+      <div class="hidden md:block overflow-x-auto">
+        <table class="w-full">
+          <thead>
+            <tr class="border-b border-border-light dark:border-border-dark bg-surface-light/50 dark:bg-surface-dark/50">
+              <th class="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                Order Number
+              </th>
+              <th class="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                Table
+              </th>
+              <th class="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                Status
+              </th>
+              <th class="px-6 py-4 text-right text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                Total
+              </th>
+              <th class="px-4 md:px-6 py-3 md:py-4 text-left text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                Created
+              </th>
+              <th class="px-6 py-4 text-center text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-border-light dark:divide-border-dark">
+            @for (order of paginatedOrders(); track order.id) {
+              <tr class="hover:bg-surface-light/50 dark:hover:bg-surface-dark/50 transition-colors">
+                <td class="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                  <span class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+                    {{ order.orderNumber }}
+                  </span>
+                </td>
+                <td class="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                  <span class="text-sm text-text-primary-light dark:text-text-primary-dark">
+                    {{ order.tableNumber || 'Take Away' }}
+                  </span>
+                </td>
+                <td class="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                  <span 
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border"
+                    [ngClass]="getStatusBadgeClasses(order.status)">
+                    <lucide-icon [name]="getStatusIcon(order.status)" size="14"></lucide-icon>
+                    {{ getStatusText(order.status) }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-right">
+                  <span class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark">
+                    RM {{ order.total.toFixed(2) }}
+                  </span>
+                </td>
+                <td class="px-4 md:px-6 py-3 md:py-4 whitespace-nowrap">
+                  <span class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                    {{ formatDate(order.createdAt) }}
+                  </span>
+                </td>
+                <td class="px-6 py-4 whitespace-nowrap text-center">
+                  <a
+                    [routerLink]="['/orders', order.id]"
+                    class="inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-xl bg-primary/10 dark:bg-primary/20 text-primary hover:bg-primary/20 dark:hover:bg-primary/30 transition-all duration-200 active:scale-95"
+                    [attr.aria-label]="'View order ' + order.orderNumber">
+                    <lucide-icon [name]="eyeIcon" size="18"></lucide-icon>
+                  </a>
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile Card View -->
+      <div class="md:hidden divide-y divide-border-light dark:divide-border-dark">
+        @for (order of paginatedOrders(); track order.id) {
+          <div class="p-4 space-y-3">
+            <!-- Header Row -->
+            <div class="flex items-start justify-between">
+              <div class="flex-1 min-w-0">
+                <h3 class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark truncate">
+                  {{ order.orderNumber }}
+                </h3>
+                <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
+                  {{ formatDate(order.createdAt) }}
+                </p>
+              </div>
+              <span 
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border shrink-0 ml-2"
+                [ngClass]="getStatusBadgeClasses(order.status)">
+                <lucide-icon [name]="getStatusIcon(order.status)" size="12"></lucide-icon>
+                {{ getStatusText(order.status) }}
+              </span>
+            </div>
+
+            <!-- Details Row -->
+            <div class="flex items-center justify-between pt-2">
+              <div class="space-y-1">
+                <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                  Table: <span class="text-text-primary-light dark:text-text-primary-dark font-medium">{{ order.tableNumber || 'Take Away' }}</span>
+                </p>
+                <p class="text-lg font-bold text-primary">
+                  RM {{ order.total.toFixed(2) }}
+                </p>
+              </div>
+              <a
+                [routerLink]="['/orders', order.id]"
+                class="inline-flex items-center justify-center min-w-[44px] min-h-[44px] rounded-xl bg-primary/10 dark:bg-primary/20 text-primary hover:bg-primary/20 dark:hover:bg-primary/30 transition-all duration-150 active:scale-95 shrink-0"
+                [attr.aria-label]="'View order ' + order.orderNumber">
+                <lucide-icon [name]="eyeIcon" size="18"></lucide-icon>
+              </a>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Pagination -->
+      @if (totalPages() > 1 || filteredOrders().length > 0) {
+        <div class="border-t border-border-light dark:border-border-dark px-4 md:px-6 py-4">
+          <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <!-- Pagination Info -->
+            <div class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+              Showing <span class="font-medium text-text-primary-light dark:text-text-primary-dark">{{ paginationInfo().start }}</span>
+              to <span class="font-medium text-text-primary-light dark:text-text-primary-dark">{{ paginationInfo().end }}</span>
+              of <span class="font-medium text-text-primary-light dark:text-text-primary-dark">{{ paginationInfo().total }}</span> orders
+            </div>
+
+            <!-- Page Size Selector -->
+            <div class="flex items-center gap-2">
+              <label class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Show:</label>
+              <select
+                [value]="pageSize()"
+                (change)="onPageSizeChange(+$any($event.target).value)"
+                class="px-3 py-1.5 rounded-lg bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 appearance-none cursor-pointer">
+                @for (size of pageSizeOptions; track size) {
+                  <option [value]="size">{{ size }}</option>
+                }
+              </select>
+            </div>
+
+            <!-- Pagination Controls -->
+            @if (totalPages() > 1) {
+              <div class="flex items-center gap-2">
+                <!-- Previous Button -->
+                <button
+                  type="button"
+                  class="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  (click)="previousPage()"
+                  [disabled]="currentPage() === 1">
+                  <lucide-icon [name]="chevronLeftIcon" size="18"></lucide-icon>
+                </button>
+
+                <!-- Page Numbers -->
+                <div class="flex items-center gap-1">
+                  @for (page of getPageNumbers(); track page) {
+                    @if (page === -1) {
+                      <span class="px-2 text-text-secondary-light dark:text-text-secondary-dark">...</span>
+                    } @else {
+                      <button
+                        type="button"
+                        [ngClass]="{
+                          'bg-primary text-white': page === currentPage(),
+                          'bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:bg-border-light dark:hover:bg-border-dark': page !== currentPage()
+                        }"
+                        class="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-200 active:scale-95"
+                        (click)="goToPage(page)">
+                        {{ page }}
+                      </button>
+                    }
+                  }
+                </div>
+
+                <!-- Next Button -->
+                <button
+                  type="button"
+                  class="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                  (click)="nextPage()"
+                  [disabled]="currentPage() === totalPages()">
+                  <lucide-icon [name]="chevronRightIcon" size="18"></lucide-icon>
+                </button>
+              </div>
+            }
+          </div>
+        </div>
+      }
+    </div>
   }
 </div>
-

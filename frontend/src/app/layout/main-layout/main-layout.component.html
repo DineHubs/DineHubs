@@ -1,17 +1,31 @@
-<mat-sidenav-container class="sidenav-container">
-  <mat-sidenav
-    #sidenav
-    [mode]="isMobile ? 'over' : 'side'"
-    [opened]="sidenavOpened"
-    class="sidenav">
-    <app-sidebar></app-sidebar>
-  </mat-sidenav>
+<div class="flex h-screen overflow-hidden bg-bg-light dark:bg-bg-dark">
+  <!-- Sidebar -->
+  <aside
+    class="w-64 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark flex-shrink-0 transition-transform duration-300 ease-in-out overflow-hidden"
+    [class.-translate-x-full]="!sidenavOpened() && isMobile()"
+    [class.fixed]="isMobile()"
+    [class.z-30]="isMobile()"
+    [class.h-full]="isMobile()">
+    <div class="h-full flex flex-col">
+      <div class="flex-1 overflow-y-auto">
+        <app-sidebar></app-sidebar>
+      </div>
+    </div>
+  </aside>
 
-  <mat-sidenav-content>
+  <!-- Backdrop for mobile -->
+  @if (isMobile() && sidenavOpened()) {
+    <div
+      class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+      (click)="toggleSidenav()">
+    </div>
+  }
+
+  <!-- Main Content -->
+  <div class="flex-1 flex flex-col overflow-hidden min-w-0">
     <app-header (menuToggle)="toggleSidenav()"></app-header>
-    <main class="main-content">
+    <main class="flex-1 overflow-y-auto">
       <router-outlet></router-outlet>
     </main>
-  </mat-sidenav-content>
-</mat-sidenav-container>
-
+  </div>
+</div>

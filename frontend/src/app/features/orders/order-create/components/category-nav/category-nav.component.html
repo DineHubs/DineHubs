@@ -1,0 +1,18 @@
+<div class="flex overflow-x-auto gap-2 pb-2 scrollbar-hide" style="scrollbar-width: none; -ms-overflow-style: none;">
+  @for (category of categories; track category) {
+    <button
+      type="button"
+      [ngClass]="{
+        'bg-pink-500 text-white hover:bg-pink-600': selectedCategory === category && isFoodCategory(category),
+        'bg-green-400 text-white hover:bg-green-500': selectedCategory === category && isDrinkCategory(category),
+        'bg-primary text-white hover:bg-primary/80': selectedCategory === category && !isFoodCategory(category) && !isDrinkCategory(category),
+        'bg-gray-100 dark:bg-gray-800 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-700': selectedCategory !== category
+      }"
+      class="flex-shrink-0 rounded-full px-4 md:px-6 py-2 text-sm font-medium transition-all duration-200 active:scale-95 whitespace-nowrap"
+      (click)="onCategoryClick(category)"
+      [attr.aria-pressed]="selectedCategory === category"
+      [attr.aria-label]="'Filter by ' + category">
+      {{ category }}
+    </button>
+  }
+</div>

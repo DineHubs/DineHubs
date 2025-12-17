@@ -1,39 +1,22 @@
-import { Component, OnInit, inject } from '@angular/core';
-import { CommonModule } from '@angular/common';
-import { MatCardModule } from '@angular/material/card';
-import { MatButtonModule } from '@angular/material/button';
-import { MatIconModule } from '@angular/material/icon';
-import { MatChipsModule } from '@angular/material/chips';
-import { MatDialogModule, MatDialog } from '@angular/material/dialog';
-import { MatProgressSpinnerModule } from '@angular/material/progress-spinner';
-import { MatSnackBar, MatSnackBarModule } from '@angular/material/snack-bar';
-import { MatTabsModule } from '@angular/material/tabs';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { FormsModule } from '@angular/forms';
+import { Component, OnInit, inject, signal } from '@angular/core';
+import { CommonModule, NgClass } from '@angular/common';
+import { Router } from '@angular/router';
+import { LucideAngularModule, Plus, Search, Grid3x3, List, Edit, Trash2, Power, PowerOff, Utensils } from 'lucide-angular';
+import { MatDialog } from '@angular/material/dialog';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { ToastService } from '../../../core/services/toast.service';
 import { AppRoles } from '../../../core/constants/roles.constants';
 import { MenuItem } from '../../../core/models/menu-item.model';
 import { MenuItemFormComponent } from '../menu-item-form/menu-item-form.component';
-import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-menu-list',
   standalone: true,
   imports: [
     CommonModule,
-    MatCardModule,
-    MatButtonModule,
-    MatIconModule,
-    MatChipsModule,
-    MatDialogModule,
-    MatProgressSpinnerModule,
-    MatSnackBarModule,
-    MatTabsModule,
-    MatFormFieldModule,
-    MatInputModule,
-    FormsModule
+    NgClass,
+    LucideAngularModule
   ],
   templateUrl: './menu-list.component.html',
   styleUrl: './menu-list.component.scss'
@@ -42,49 +25,61 @@ export class MenuListComponent implements OnInit {
   private apiService = inject(ApiService);
   private authService = inject(AuthService);
   private dialog = inject(MatDialog);
-  private snackBar = inject(MatSnackBar);
+  private toastService = inject(ToastService);
   private router = inject(Router);
 
-  menuItems: MenuItem[] = [];
-  filteredItems: MenuItem[] = [];
-  categories: string[] = [];
-  selectedCategory = 'All';
-  searchTerm = '';
-  isLoading = false;
-  viewMode: 'grid' | 'list' = 'grid';
+  menuItems = signal<MenuItem[]>([]);
+  filteredItems = signal<MenuItem[]>([]);
+  categories = signal<string[]>([]);
+  selectedCategory = signal<string>('All');
+  searchTerm = signal<string>('');
+  isLoading = signal<boolean>(false);
+  viewMode = signal<'grid' | 'list'>('grid');
+  showDeleteModal = signal<boolean>(false);
+  itemToDelete = signal<MenuItem | null>(null);
+
+  // Icons
+  plusIcon = Plus;
+  searchIcon = Search;
+  gridIcon = Grid3x3;
+  listIcon = List;
+  editIcon = Edit;
+  trashIcon = Trash2;
+  powerIcon = Power;
+  powerOffIcon = PowerOff;
+  utensilsIcon = Utensils;
 
   ngOnInit(): void {
-    // Access control handled by route guard
     this.loadMenuItems();
   }
 
   loadMenuItems(): void {
-    this.isLoading = true;
+    this.isLoading.set(true);
     this.apiService.get<MenuItem[]>('MenuItems').subscribe({
       next: (items) => {
-        this.menuItems = items;
-        this.filteredItems = items;
-        this.categories = ['All', ...new Set(items.map(item => item.category))];
-        this.isLoading = false;
+        this.menuItems.set(items);
+        this.filteredItems.set(items);
+        this.categories.set(['All', ...new Set(items.map(item => item.category))]);
+        this.isLoading.set(false);
       },
       error: (error) => {
         console.error('Error loading menu items:', error);
         if (error.status === 401) {
-          this.snackBar.open('Session expired. Please login again', 'Close', { duration: 5000 });
+          this.toastService.error('Session expired. Please login again');
           this.authService.logout();
         } else if (error.status === 403) {
-          this.snackBar.open('You do not have permission to access menu items', 'Close', { duration: 5000 });
+          this.toastService.error('You do not have permission to access menu items');
           this.router.navigate(['/dashboard']);
         } else {
-          this.snackBar.open('Failed to load menu items', 'Close', { duration: 3000 });
+          this.toastService.error('Failed to load menu items');
         }
-        this.isLoading = false;
+        this.isLoading.set(false);
       }
     });
   }
 
   filterByCategory(category: string): void {
-    this.selectedCategory = category;
+    this.selectedCategory.set(category);
     this.applyFilters();
   }
 
@@ -93,21 +88,21 @@ export class MenuListComponent implements OnInit {
   }
 
   applyFilters(): void {
-    let filtered = this.menuItems;
+    let filtered = this.menuItems();
 
-    if (this.selectedCategory !== 'All') {
-      filtered = filtered.filter(item => item.category === this.selectedCategory);
+    if (this.selectedCategory() !== 'All') {
+      filtered = filtered.filter(item => item.category === this.selectedCategory());
     }
 
-    if (this.searchTerm) {
-      const term = this.searchTerm.toLowerCase();
+    const searchTerm = this.searchTerm().toLowerCase();
+    if (searchTerm) {
       filtered = filtered.filter(item =>
-        item.name.toLowerCase().includes(term) ||
-        item.category.toLowerCase().includes(term)
+        item.name.toLowerCase().includes(searchTerm) ||
+        item.category.toLowerCase().includes(searchTerm)
       );
     }
 
-    this.filteredItems = filtered;
+    this.filteredItems.set(filtered);
   }
 
   openAddDialog(): void {
@@ -136,19 +131,31 @@ export class MenuListComponent implements OnInit {
     });
   }
 
-  deleteItem(item: MenuItem): void {
-    if (confirm(`Are you sure you want to delete "${item.name}"?`)) {
-      this.apiService.delete(`MenuItems/${item.id}`).subscribe({
-        next: () => {
-          this.snackBar.open('Menu item deleted successfully', 'Close', { duration: 3000 });
-          this.loadMenuItems();
-        },
-        error: (error) => {
-          console.error('Error deleting menu item:', error);
-          this.snackBar.open('Failed to delete menu item', 'Close', { duration: 3000 });
-        }
-      });
-    }
+  openDeleteModal(item: MenuItem): void {
+    this.itemToDelete.set(item);
+    this.showDeleteModal.set(true);
+  }
+
+  closeDeleteModal(): void {
+    this.showDeleteModal.set(false);
+    this.itemToDelete.set(null);
+  }
+
+  confirmDelete(): void {
+    const item = this.itemToDelete();
+    if (!item) return;
+
+    this.apiService.delete(`MenuItems/${item.id}`).subscribe({
+      next: () => {
+        this.toastService.success('Menu item deleted successfully');
+        this.closeDeleteModal();
+        this.loadMenuItems();
+      },
+      error: (error) => {
+        console.error('Error deleting menu item:', error);
+        this.toastService.error('Failed to delete menu item');
+      }
+    });
   }
 
   toggleAvailability(item: MenuItem): void {
@@ -161,14 +168,13 @@ export class MenuListComponent implements OnInit {
       imageUrl: updatedItem.imageUrl
     }).subscribe({
       next: () => {
-        this.snackBar.open(`Menu item ${updatedItem.isAvailable ? 'enabled' : 'disabled'}`, 'Close', { duration: 3000 });
+        this.toastService.success(`Menu item ${updatedItem.isAvailable ? 'enabled' : 'disabled'}`);
         this.loadMenuItems();
       },
       error: (error) => {
         console.error('Error updating menu item:', error);
-        this.snackBar.open('Failed to update menu item', 'Close', { duration: 3000 });
+        this.toastService.error('Failed to update menu item');
       }
     });
   }
 }
-

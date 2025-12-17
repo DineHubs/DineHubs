@@ -1,0 +1,37 @@
+<div 
+  class="group relative bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer active:scale-95 border border-gray-200 dark:border-gray-700"
+  (click)="onAddToCart()"
+  role="button"
+  tabindex="0"
+  [attr.aria-label]="'Add ' + menuItem.name + ' to cart'"
+  (keydown.enter)="onAddToCart(); $event.preventDefault()"
+  (keydown.space)="onAddToCart(); $event.preventDefault()">
+  
+  <!-- Product Content - Compact -->
+  <div class="p-3 flex flex-col h-full min-h-[120px]">
+    <!-- Item Name -->
+    <h3 class="font-medium text-gray-900 dark:text-white text-sm mb-auto leading-tight line-clamp-2">
+      {{ menuItem.name }}
+    </h3>
+    
+    <!-- Price -->
+    <div class="mt-2 mb-1">
+      <span class="text-base font-bold text-gray-900 dark:text-white">
+        RM{{ menuItem.price | number:'1.2-2' }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Category Color Strip at Bottom -->
+  <div 
+    class="h-1 w-full"
+    [ngClass]="getCategoryColor(menuItem.category)">
+  </div>
+
+  <!-- Quantity Badge -->
+  @if (quantity() > 0) {
+    <div class="absolute top-2 right-2 bg-black text-white rounded w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md">
+      {{ quantity() }}
+    </div>
+  }
+</div>

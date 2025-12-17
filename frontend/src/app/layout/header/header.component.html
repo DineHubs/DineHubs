@@ -1,29 +1,73 @@
-<mat-toolbar color="primary">
-  <button mat-icon-button (click)="onMenuToggle()" class="menu-button">
-    <mat-icon>menu</mat-icon>
-  </button>
-  <span class="title">Restaurant POS</span>
-  <span class="spacer"></span>
-  <div class="user-info">
-    <span class="user-name">{{ currentUser()?.email || 'User' }}</span>
-    <button mat-icon-button [matMenuTriggerFor]="userMenu">
-      <mat-icon>account_circle</mat-icon>
-    </button>
-    <mat-menu #userMenu="matMenu">
-      <button mat-menu-item disabled>
-        <mat-icon>person</mat-icon>
-        <span>{{ currentUser()?.email }}</span>
+<header class="sticky top-0 z-50 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-xl border-b border-border-light dark:border-border-dark shadow-sm">
+  <div class="flex items-center justify-between px-4 md:px-6 h-16">
+    <!-- Left: Menu Toggle & Title -->
+    <div class="flex items-center gap-4">
+      <button
+        type="button"
+        class="p-2 rounded-xl hover:bg-border-light dark:hover:bg-border-dark transition-colors active:scale-95"
+        (click)="onMenuToggle()"
+        [attr.aria-label]="'Toggle menu'">
+        <lucide-icon [name]="menuIcon" size="24" class="text-text-primary-light dark:text-text-primary-dark"></lucide-icon>
       </button>
-      <button mat-menu-item disabled>
-        <mat-icon>business</mat-icon>
-        <span>Roles: {{ currentUser()?.roles?.join(', ') || 'None' }}</span>
-      </button>
-      <mat-divider></mat-divider>
-      <button mat-menu-item (click)="onLogout()">
-        <mat-icon>logout</mat-icon>
-        <span>Logout</span>
-      </button>
-    </mat-menu>
-  </div>
-</mat-toolbar>
+      <h1 class="text-xl font-bold text-text-primary-light dark:text-text-primary-dark hidden sm:block">
+        Restaurant POS
+      </h1>
+    </div>
 
+    <!-- Right: User Menu -->
+    <div class="relative">
+      <button
+        type="button"
+        class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95"
+        (click)="toggleUserMenu()"
+        [attr.aria-expanded]="showUserMenu()"
+        [attr.aria-label]="'User menu'">
+        <div class="p-2 rounded-full bg-primary/10 dark:bg-primary/20">
+          <lucide-icon [name]="userIcon" size="20" class="text-primary"></lucide-icon>
+        </div>
+        <div class="hidden md:block text-left">
+          <p class="text-sm font-medium text-text-primary-light dark:text-text-primary-dark">
+            {{ currentUser()?.email || 'User' }}
+          </p>
+          <p class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+            {{ userRoles }}
+          </p>
+        </div>
+      </button>
+
+      <!-- Dropdown Menu -->
+      @if (showUserMenu()) {
+        <div
+          class="absolute right-0 mt-2 w-64 bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl border border-border-light dark:border-border-dark overflow-hidden z-50 animate-in fade-in zoom-in-95"
+          (click)="$event.stopPropagation()">
+          <div class="p-4 border-b border-border-light dark:border-border-dark">
+            <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark mb-1">
+              {{ currentUser()?.email }}
+            </p>
+            <div class="flex items-center gap-2 text-xs text-text-secondary-light dark:text-text-secondary-dark">
+              <lucide-icon [name]="shieldIcon" size="14"></lucide-icon>
+              <span>Roles: {{ userRoles }}</span>
+            </div>
+          </div>
+          <div class="p-2">
+            <button
+              type="button"
+              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left text-sm font-medium text-error hover:bg-error/10 transition-colors active:scale-95"
+              (click)="onLogout()">
+              <lucide-icon [name]="logOutIcon" size="18"></lucide-icon>
+              <span>Logout</span>
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- Backdrop to close menu -->
+  @if (showUserMenu()) {
+    <div
+      class="fixed inset-0 z-40"
+      (click)="closeUserMenu()">
+    </div>
+  }
+</header>
