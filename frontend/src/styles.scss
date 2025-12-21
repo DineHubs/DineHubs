@@ -37,3 +37,21 @@ body {
 *:focus-visible {
   @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-bg-light dark:ring-offset-bg-dark;
 }
+
+/* Print styles - hide everything except thermal receipts */
+@media print {
+  body {
+    background: white !important;
+  }
+  
+  // Hide common page elements when printing receipts
+  router-outlet,
+  app-toast-container,
+  nav,
+  header,
+  footer,
+  aside {
+    display: none !important;
+    visibility: hidden !important;
+  }
+}

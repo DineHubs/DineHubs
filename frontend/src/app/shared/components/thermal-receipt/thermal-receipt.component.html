@@ -1,0 +1,71 @@
+<div *ngIf="order()" class="thermal-receipt">
+  <div class="header">
+    <h1>DINEHUBS</h1>
+    <p>Premium Dining Experience</p>
+    <div class="divider"></div>
+  </div>
+
+  <div class="info">
+    <div class="row">
+      <span>Order #:</span>
+      <span>{{ order()?.orderNumber }}</span>
+    </div>
+    <div class="row">
+      <span>Date:</span>
+      <span>{{ formatDate(order()?.createdAt) }}</span>
+    </div>
+    <div class="row">
+      <span>Type:</span>
+      <span>{{ order()?.isTakeAway ? 'TAKE AWAY' : 'DINE IN' }}</span>
+    </div>
+    <div *ngIf="!order()?.isTakeAway" class="row">
+      <span>Table:</span>
+      <span>{{ order()?.tableNumber }}</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="items">
+    <div class="item-header">
+      <span class="qty">Qty</span>
+      <span class="description">Item</span>
+      <span class="price">Price</span>
+    </div>
+    <div *ngFor="let line of order()?.lines" class="item">
+      <span class="qty">{{ line.quantity }}</span>
+      <span class="description" [title]="line.name">{{ line.name }}</span>
+      <span class="price">RM {{ (line.price * line.quantity).toFixed(2) }}</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="totals">
+    <div class="row">
+      <span>Subtotal</span>
+      <span>RM {{ (order()?.subtotal ?? 0).toFixed(2) }}</span>
+    </div>
+    <div class="row">
+      <span>Tax (6%)</span>
+      <span>RM {{ (order()?.tax ?? 0).toFixed(2) }}</span>
+    </div>
+    <div class="row">
+      <span>Service Charge (10%)</span>
+      <span>RM {{ (order()?.serviceCharge ?? 0).toFixed(2) }}</span>
+    </div>
+    <div class="row total">
+      <span>TOTAL</span>
+      <span>RM {{ (order()?.total ?? 0).toFixed(2) }}</span>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <div class="footer text-center">
+    <p>Thank you for dining with us!</p>
+    <p>Please come again</p>
+    <div class="spacer"></div>
+    <p class="small">System by DineHubs</p>
+  </div>
+</div>

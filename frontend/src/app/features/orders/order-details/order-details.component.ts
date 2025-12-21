@@ -5,6 +5,7 @@ import { LucideAngularModule, ArrowLeft, X, Trash2, CreditCard, Receipt, Printer
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { PrintService } from '../../../core/services/print.service';
 import { Order, OrderStatus, CancelOrderRequest, UpdateOrderLineRequest, Payment, ReprintReceiptRequest } from '../../../core/models/order.model';
 
 @Component({
@@ -24,11 +25,12 @@ export class OrderDetailsComponent implements OnInit {
   private authService = inject(AuthService);
   private router = inject(Router);
   private toastService = inject(ToastService);
+  private printService = inject(PrintService);
 
   order = signal<Order | null>(null);
   payment = signal<Payment | null>(null);
   receiptUrl = signal<string | null>(null);
-  
+
   // Modal states
   showCancelModal = signal<boolean>(false);
   showReprintModal = signal<boolean>(false);
@@ -215,7 +217,7 @@ export class OrderDetailsComponent implements OnInit {
         this.receiptUrl.set(response.receiptUrl);
         this.toastService.success('Receipt reprinted successfully');
         this.closeReprintModal();
-        window.open(response.receiptUrl, '_blank');
+        this.printService.printOrder(this.order()!);
       },
       error: (error) => {
         console.error('Error reprinting receipt:', error);

@@ -1,0 +1,234 @@
+@media screen {
+    .thermal-receipt {
+        display: none !important;
+    }
+}
+
+@media print {
+    @page {
+        size: 80mm auto;
+        margin: 0;
+        padding: 0;
+    }
+
+    // Reset page styling
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 80mm !important;
+        height: auto !important;
+        background: white !important;
+    }
+
+    // AGGRESSIVE: Hide EVERYTHING by default - this catches all elements
+    * {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    // Hide specific Angular components and their content
+    app-root,
+    app-root > *,
+    router-outlet,
+    router-outlet *,
+    app-toast-container,
+    app-toast-container *,
+    app-main-layout,
+    app-main-layout *,
+    app-order-create,
+    app-order-create * {
+        display: none !important;
+        visibility: hidden !important;
+    }
+
+    // Hide pseudo-elements
+    body::after,
+    body::before,
+    html::after,
+    html::before,
+    *::after,
+    *::before {
+        display: none !important;
+    }
+
+    // NOW show ONLY the thermal receipt and all its children
+    .thermal-receipt {
+        display: block !important;
+        visibility: visible !important;
+        position: absolute !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 58mm !important;
+        max-width: 58mm !important;
+        margin: 0 !important;
+        padding: 4mm !important;
+        background: white !important;
+        color: black !important;
+        font-family: 'Courier New', Courier, monospace !important;
+        font-size: 10pt !important;
+        box-shadow: none !important;
+        page-break-after: avoid !important;
+    }
+
+    // Make absolutely sure ALL children of thermal receipt are visible
+    .thermal-receipt * {
+        display: block !important;
+        visibility: visible !important;
+    }
+
+    // Fixed layout for items to ensure they stay on one line
+    .thermal-receipt .item,
+    .thermal-receipt .item-header,
+    .thermal-receipt .row {
+        display: flex !important;
+        visibility: visible !important;
+        flex-direction: row !important;
+    }
+
+    // Ensure specific elements are properly displayed with correct display types
+    .thermal-receipt div {
+        display: block !important;
+        visibility: visible !important;
+    }
+
+    .thermal-receipt span {
+        display: inline-block !important;
+        visibility: visible !important;
+    }
+
+    .thermal-receipt h1,
+    .thermal-receipt p {
+        display: block !important;
+        visibility: visible !important;
+    }
+
+    .thermal-receipt .divider {
+        border-top: 1px dashed black !important;
+        margin: 2mm 0 !important;
+        width: 100% !important;
+        display: block !important;
+        visibility: visible !important;
+    }
+
+    // Text wrapping for long item names
+    .thermal-receipt .description {
+        word-wrap: break-word !important;
+        word-break: break-word !important;
+        overflow-wrap: break-word !important;
+        hyphens: auto !important;
+    }
+}
+
+.thermal-receipt {
+    width: 58mm;
+    max-width: 58mm;
+    padding: 2mm;
+    background: white;
+    color: black;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 10pt;
+    line-height: 1.2;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 3mm;
+
+    h1 {
+        font-size: 14pt;
+        margin: 0;
+        font-weight: bold;
+    }
+
+    p {
+        margin: 0;
+        font-size: 8pt;
+    }
+}
+
+.divider {
+    border-top: 1px dashed black;
+    margin: 2mm 0;
+}
+
+.info {
+    font-size: 9pt;
+    margin-bottom: 2mm;
+}
+
+.row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 0.5mm;
+}
+
+.items {
+    margin-bottom: 2mm;
+}
+
+.item-header {
+    display: flex;
+    font-weight: bold;
+    font-size: 9pt;
+    border-bottom: 1px solid black;
+    padding-bottom: 1mm;
+    margin-bottom: 1mm;
+}
+
+.item {
+    display: flex;
+    font-size: 9pt;
+    margin-bottom: 1mm;
+}
+
+.qty {
+    width: 8mm;
+}
+
+.description {
+    flex: 1;
+    word-wrap: break-word;
+    word-break: break-word;
+    overflow-wrap: break-word;
+    min-width: 0;
+}
+
+.price {
+    width: 15mm;
+    text-align: right;
+}
+
+.totals {
+    .row {
+        font-size: 9pt;
+    }
+
+    .total {
+        font-size: 12pt;
+        font-weight: bold;
+        margin-top: 2mm;
+    }
+}
+
+.footer {
+    text-align: center;
+    margin-top: 5mm;
+    font-size: 8pt;
+
+    p {
+        margin: 0.5mm 0;
+    }
+
+    .small {
+        font-size: 7pt;
+        margin-top: 3mm;
+    }
+}
+
+.spacer {
+    height: 5mm;
+}
+
+.text-center {
+    text-align: center;
+}

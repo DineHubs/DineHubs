@@ -6,6 +6,7 @@ import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ThemeService } from '../../../core/services/theme.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { PrintService } from '../../../core/services/print.service';
 import { MenuItem } from '../../../core/models/menu-item.model';
 import { CreateOrderRequest, OrderLine } from '../../../core/models/order.model';
 import { ProductGridComponent } from './components/product-grid/product-grid.component';
@@ -40,6 +41,7 @@ export class OrderCreateComponent implements OnInit {
   private router = inject(Router);
   private themeService = inject(ThemeService);
   private toastService = inject(ToastService);
+  private printService = inject(PrintService);
 
   // Signals for state management
   menuItems = signal<MenuItem[]>([]);
@@ -77,7 +79,7 @@ export class OrderCreateComponent implements OnInit {
   });
 
   cartTotal = computed(() => {
-    return this.cart().reduce((total, item) => 
+    return this.cart().reduce((total, item) =>
       total + (item.menuItem.price * item.quantity), 0
     );
   });
@@ -132,7 +134,7 @@ export class OrderCreateComponent implements OnInit {
   addToCart(menuItem: MenuItem): void {
     const currentCart = this.cart();
     const existingItem = currentCart.find(item => item.menuItem.id === menuItem.id);
-    
+
     if (existingItem) {
       this.cart.set(
         currentCart.map(item =>
@@ -174,7 +176,7 @@ export class OrderCreateComponent implements OnInit {
 
   onCheckout(): void {
     const currentCart = this.cart();
-    
+
     if (currentCart.length === 0) {
       this.toastService.error('Please add items to cart before checkout');
       return;
@@ -201,7 +203,7 @@ export class OrderCreateComponent implements OnInit {
 
   submitOrder(): void {
     const currentCart = this.cart();
-    
+
     if (currentCart.length === 0) {
       this.toastService.error('Please add items to cart before submitting');
       return;
@@ -223,7 +225,7 @@ export class OrderCreateComponent implements OnInit {
         if (!menuItemId || !this.isValidGuid(menuItemId)) {
           throw new Error(`Invalid menu item ID: ${menuItemId}`);
         }
-        
+
         return {
           menuItemId: menuItemId,
           name: item.menuItem.name,
@@ -242,7 +244,35 @@ export class OrderCreateComponent implements OnInit {
         next: (response) => {
           this.toastService.success('Order created successfully!');
           this.isCheckoutOpen.set(false);
-          this.router.navigate(['/orders']);
+          
+          // Set up navigation handler before printing
+          if (typeof window !== 'undefined') {
+            const originalAfterPrint = window.onafterprint;
+            window.onafterprint = (ev: Event) => {
+              // Call original handler first (to clear print data in PrintService)
+              if (originalAfterPrint) {
+                originalAfterPrint.call(window, ev);
+              }
+              // Then navigate
+              this.router.navigate(['/orders']);
+            };
+            
+            // Fallback: navigate after 3 seconds if print dialog doesn't trigger onafterprint
+            // (user might have blocked print dialog or it might not fire in some browsers)
+            setTimeout(() => {
+              if (window.onafterprint) {
+                const handler = window.onafterprint;
+                // Clear handler to prevent double navigation
+                window.onafterprint = null;
+                // Create a mock event for the handler
+                const mockEvent = new Event('afterprint');
+                handler.call(window, mockEvent);
+              }
+            }, 3000);
+          }
+          
+          // Trigger print
+          this.printService.printOrder(response);
         },
         error: (error) => {
           console.error('Error creating order:', error);
@@ -262,8 +292,8 @@ export class OrderCreateComponent implements OnInit {
                   validationErrors.push((err as any).message);
                 }
               });
-              errorMessage = validationErrors.length > 0 
-                ? validationErrors.join(', ') 
+              errorMessage = validationErrors.length > 0
+                ? validationErrors.join(', ')
                 : errorMessage;
             } else if (error.error.details) {
               errorMessage = error.error.details;
