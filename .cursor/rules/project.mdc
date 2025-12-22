@@ -1,0 +1,385 @@
+---
+alwaysApply: true
+---
+# DineHubs Order Management System - Project Rules
+
+## Project Overview
+This is a multi-tenant order management system built with .NET 8 (Clean Architecture) backend and Angular 19 frontend. The system follows Clean Architecture principles with clear separation of concerns across layers.
+
+## Architecture Principles
+
+### Clean Architecture Layers
+1. **OrderManagement.Api** (Presentation Layer)
+   - Controllers only handle HTTP concerns
+   - Use dependency injection via constructor
+   - All business logic must be in Application layer
+   - Use API versioning: `[ApiVersion("1.0")]` and `[Route("api/v{version:apiVersion}/[controller]")]`
+
+2. **OrderManagement.Application** (Application Layer)
+   - Contains use cases, interfaces, DTOs, and validators
+   - Use MediatR for CQRS pattern (IRequest/IRequestHandler)
+   - Use FluentValidation for request validation
+   - Use AutoMapper for DTO mapping
+   - No direct database access - use interfaces from Abstractions
+
+3. **OrderManagement.Domain** (Domain Layer)
+   - Contains entities, value objects, enums, and domain logic
+   - No dependencies on other layers
+   - Entities should be rich domain models with business logic
+   - Use enums for domain concepts (OrderStatus, PaymentStatus, etc.)
+
+4. **OrderManagement.Infrastructure** (Infrastructure Layer)
+   - Implements interfaces from Application layer
+   - Contains EF Core DbContext, repositories, external service integrations
+   - Handles data persistence, caching, messaging, etc.
+   - Database migrations go in Migrations folder
+
+## C# Backend Rules
+
+### General C# Standards
+- Use C# 12.0 features (primary constructors, collection expressions, etc.)
+- Enable nullable reference types (`<Nullable>enable</Nullable>`)
+- Use implicit usings (`<ImplicitUsings>enable</ImplicitUsings>`)
+- Target .NET 8.0
+- Follow Microsoft C# coding conventions
+
+### Naming Conventions
+- **Classes**: PascalCase (e.g., `OrderService`, `CreateOrderHandler`)
+- **Interfaces**: Start with `I` + PascalCase (e.g., `IOrderService`, `ITenantContext`)
+- **Methods**: PascalCase (e.g., `CreateOrderAsync`, `GetOrderByIdAsync`)
+- **Properties**: PascalCase (e.g., `OrderId`, `TenantId`, `BranchId`)
+- **Private fields**: camelCase with underscore prefix (e.g., `_logger`, `_context`)
+- **Constants**: PascalCase (e.g., `MaxRetryAttempts`)
+- **Enums**: PascalCase (e.g., `OrderStatus`, `PaymentStatus`)
+- **Namespaces**: Match folder structure (e.g., `OrderManagement.Application.Ordering`)
+
+### Controllers
+- Use primary constructors for dependency injection
+- Always use `[ApiController]` attribute
+- Use `[Authorize]` attribute for protected endpoints
+- Use role-based authorization: `[Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter}")]`
+- Always use `CancellationToken` parameter
+- Return appropriate HTTP status codes:
+  - `CreatedAtAction` for POST (201)
+  - `Ok` for GET (200)
+  - `NoContent` for DELETE/PATCH (204)
+  - `BadRequest` for validation errors (400)
+  - `NotFound` for missing resources (404)
+  - `StatusCode(500)` for unexpected errors
+- Always wrap operations in try-catch blocks
+- Use structured logging with Serilog (logger.Warning, logger.Error)
+- Validate ModelState before processing
+- Check tenant/branch context before operations
+
+### Application Services & Handlers
+- Use MediatR pattern: `IRequest<TResponse>` and `IRequestHandler<TRequest, TResponse>`
+- Handler naming: `{Command/Query}Handler` (e.g., `CreateOrderHandler`)
+- Request naming: `{Action}{Entity}Request` (e.g., `CreateOrderRequest`)
+- Use FluentValidation validators: `{Request}Validator` (e.g., `CreateOrderRequestValidator`)
+- All async methods must end with `Async` suffix
+- Use `CancellationToken` in all async methods
+- Inject dependencies via constructor
+- Use AutoMapper for DTO transformations
+
+### Domain Entities
+- Entities should be in `OrderManagement.Domain.Entities`
+- Use `Guid` for primary keys
+- Include tenant and branch context where applicable
+- Add domain validation logic in entities
+- Use value objects for complex types
+- Enums go in `OrderManagement.Domain.Enums`
+
+### DTOs and Contracts
+- Request DTOs: `{Action}{Entity}Request` (e.g., `CreateOrderRequest`)
+- Response DTOs: `{Entity}Response` or `{Entity}Dto`
+- Place API contracts in `OrderManagement.Api.Contracts`
+- Place application DTOs in `OrderManagement.Application.{Feature}.Models`
+
+### Validation
+- Use FluentValidation for all request validation
+- Validators should be in `OrderManagement.Api.Validators` or `OrderManagement.Application.{Feature}`
+- Register validators in DependencyInjection
+- Validation errors should return 400 BadRequest with error details
+
+### Dependency Injection
+- Use extension methods: `AddApplication()`, `AddInfrastructure()`
+- Register services in `DependencyInjection.cs` files
+- Use appropriate lifetimes:
+  - `Transient` for stateless services
+  - `Scoped` for request-scoped services (repositories, DbContext)
+  - `Singleton` for configuration and caches
+
+### Error Handling
+- Use `GlobalExceptionHandlerMiddleware` for global exception handling
+- Log all exceptions with appropriate levels:
+  - `Warning` for expected business logic errors
+  - `Error` for unexpected exceptions
+- Return user-friendly error messages
+- Never expose internal exception details to clients
+
+### Logging
+- Use Serilog for structured logging
+- Log levels: Debug, Information, Warning, Error, Fatal
+- Include context in log messages (use structured logging)
+- Example: `logger.Warning("Order creation failed: {Message}", ex.Message)`
+
+### Multi-Tenancy
+- Always check `ITenantContext.TenantId` and `ITenantContext.BranchId`
+- Filter queries by tenant and branch
+- Never allow cross-tenant data access
+- Use `ITenantContext` from `OrderManagement.Application.Abstractions`
+
+### Database
+- Use Entity Framework Core 8.0
+- Migrations go in `OrderManagement.Infrastructure.Migrations`
+- Use DbContext from `OrderManagement.Infrastructure.Persistence`
+- Always use async methods for database operations
+- Use transactions for multi-step operations
+
+### Security
+- Always use `[Authorize]` on protected endpoints
+- Use role-based authorization with `SystemRoles` constants
+- Validate tenant/branch context on every request
+- Never trust client input - always validate
+- Use JWT Bearer authentication
+- Store sensitive data securely (use configuration, not hardcoded)
+
+## Angular Frontend Rules
+
+### General TypeScript/Angular Standards
+- Use TypeScript strict mode
+- Angular 19 with standalone components
+- Use RxJS for reactive programming
+- Follow Angular style guide
+
+### Naming Conventions
+- **Components**: PascalCase with `Component` suffix (e.g., `OrderListComponent`)
+- **Services**: PascalCase with `Service` suffix (e.g., `OrderService`)
+- **Models/Interfaces**: PascalCase (e.g., `Order`, `CreateOrderRequest`)
+- **Files**: kebab-case matching component/service name (e.g., `order-list.component.ts`)
+- **Selectors**: kebab-case (e.g., `app-order-list`)
+- **Methods**: camelCase (e.g., `getOrders()`, `createOrder()`)
+- **Properties**: camelCase (e.g., `orders$`, `isLoading`)
+- **Constants**: UPPER_SNAKE_CASE (e.g., `API_BASE_URL`)
+
+### Component Structure
+- Use standalone components
+- Organize by feature: `src/app/features/{feature-name}/`
+- Each feature should have:
+  - `{feature}.component.ts`
+  - `{feature}.component.html`
+  - `{feature}.component.scss`
+  - `{feature}.service.ts` (if needed)
+  - `models/` folder for types
+- Use OnPush change detection strategy when possible
+- Use signals for reactive state management
+
+### Services
+- Services should be in `core/services/` or feature folders
+- Use `providedIn: 'root'` for singleton services
+- Use RxJS Observables for async operations
+- Return typed Observables: `Observable<Order[]>` not `Observable<any>`
+- Handle errors with `catchError` operator
+- Use `HttpClient` for API calls
+
+### HTTP Client
+- Create base API service or use interceptors
+- Use typed responses: `Observable<OrderResponse>`
+- Handle errors consistently
+- Include authentication tokens in headers
+- Use environment configuration for API URLs
+
+### Styling
+- Use Tailwind CSS for utility-first styling
+- Use Angular Material for UI components
+- Keep component styles scoped (use `:host`)
+- Use SCSS for complex styling needs
+- Follow mobile-first responsive design
+
+### State Management
+- Use RxJS for state management (BehaviorSubject, Observable)
+- Consider signals for simple component state
+- Keep state close to where it's used
+- Avoid prop drilling - use services for shared state
+
+### Forms
+- Use Reactive Forms (FormBuilder, FormGroup, FormControl)
+- Validate forms on both client and server
+- Show validation errors clearly
+- Disable submit button while processing
+
+### Routing
+- Use Angular Router with lazy loading
+- Protect routes with guards (AuthGuard, RoleGuard)
+- Use route parameters for IDs
+- Handle route errors (404, 403, etc.)
+
+### Error Handling
+- Create global error handler service
+- Show user-friendly error messages
+- Log errors for debugging
+- Handle network errors gracefully
+
+### Testing
+- Write unit tests for services
+- Test components with Angular testing utilities
+- Mock HTTP calls in tests
+- Test error scenarios
+
+## File Organization
+
+### Backend Structure
+
+OrderManagement.Api/
+├── Controllers/ # API controllers
+├── Contracts/ # Request/Response DTOs
+├── Validators/ # FluentValidation validators
+├── Middleware/ # Custom middleware
+└── Configuration/ # Swagger, etc.
+OrderManagement.Application/
+├── {Feature}/ # Feature folders (Orders, MenuItems, etc.)
+│ ├── Models/ # DTOs
+│ └── {Feature}Handler.cs
+├── Abstractions/ # Interfaces
+└── Common/ # Shared application code
+OrderManagement.Domain/
+├── Entities/ # Domain entities
+├── Enums/ # Domain enums
+└── Common/ # Base classes
+OrderManagement.Infrastructure/
+├── Persistence/ # DbContext, configurations
+├── {Feature}/ # Feature implementations
+├── Migrations/ # EF Core migrations
+└── DependencyInjection.cs
+
+
+### Frontend Structure
+frontend/src/app/
+├── core/ # Core services, guards, interceptors
+├── features/ # Feature modules
+│ ├── orders/
+│ ├── kitchen/
+│ ├── menu/
+│ └── ...
+├── layout/ # Layout components
+└── shared/ # Shared components, pipes, directives
+
+
+## Git & Version Control
+
+### Commit Messages
+- Use conventional commits format:
+  - `feat:` for new features
+  - `fix:` for bug fixes
+  - `refactor:` for code refactoring
+  - `docs:` for documentation
+  - `test:` for tests
+  - `chore:` for maintenance
+- Include scope: `feat(orders): add order cancellation`
+- Keep messages concise but descriptive
+
+### Branching
+- Use feature branches: `feature/order-cancellation`
+- Use descriptive branch names
+- Keep branches up to date with main
+- Delete merged branches
+
+## Code Quality
+
+### General Rules
+- Write self-documenting code with clear names
+- Keep methods small and focused (single responsibility)
+- Avoid deep nesting (max 3-4 levels)
+- Use early returns to reduce nesting
+- Comment complex business logic, not obvious code
+- Remove unused code and imports
+- Keep files under 300-400 lines when possible
+
+### Performance
+- Use async/await for all I/O operations
+- Avoid N+1 queries - use Include() or projection
+- Cache frequently accessed data
+- Use pagination for large datasets
+- Optimize database queries
+
+### Security
+- Never commit secrets or API keys
+- Use environment variables for configuration
+- Validate all user input
+- Use parameterized queries (EF Core handles this)
+- Implement rate limiting where appropriate
+- Use HTTPS in production
+
+## Testing
+
+### Backend Tests
+- Write unit tests for business logic
+- Write integration tests for API endpoints
+- Test error scenarios
+- Use test data builders for complex objects
+- Mock external dependencies
+
+### Frontend Tests
+- Write unit tests for services
+- Test component logic
+- Test user interactions
+- Mock API calls
+- Test error handling
+
+## Documentation
+
+### Code Comments
+- Document public APIs
+- Explain "why" not "what"
+- Use XML documentation for public methods
+- Keep comments up to date with code
+
+### README
+- Keep README.md updated
+- Document setup instructions
+- Include architecture diagrams
+- Document environment variables
+
+## Dependencies
+
+### Backend
+- .NET 8.0
+- Entity Framework Core 8.0
+- MediatR (CQRS)
+- FluentValidation
+- AutoMapper
+- Serilog
+- JWT Bearer Authentication
+
+### Frontend
+- Angular 19
+- Angular Material
+- Tailwind CSS
+- RxJS
+- Chart.js (for charts)
+
+## Environment Configuration
+
+- Use `appsettings.json` and `appsettings.Development.json` for backend
+- Use `environment.ts` and `environment.development.ts` for frontend
+- Never commit sensitive data
+- Use environment variables for secrets
+- Document required environment variables
+
+## API Design
+
+- Use RESTful conventions
+- Version APIs: `/api/v1/orders`
+- Use appropriate HTTP methods (GET, POST, PUT, PATCH, DELETE)
+- Return consistent response formats
+- Use pagination for list endpoints
+- Include filtering and sorting options
+- Document APIs with Swagger/OpenAPI
+
+## Multi-Tenancy
+
+- Always filter by TenantId and BranchId
+- Validate tenant context on every request
+- Never allow cross-tenant access
+- Use ITenantContext for tenant information
+- Include tenant/branch in all queries
