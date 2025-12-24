@@ -1,7 +1,7 @@
 import { Component, EventEmitter, Output, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { LucideAngularModule, Menu, User, LogOut, Building2, Shield } from 'lucide-angular';
+import { LucideAngularModule, Menu, User, LogOut, Building2, Shield, Moon, Sun } from 'lucide-angular';
 import { AuthService } from '../../core/services/auth.service';
 import { ThemeService } from '../../core/services/theme.service';
 
@@ -30,9 +30,23 @@ export class HeaderComponent {
   logOutIcon = LogOut;
   buildingIcon = Building2;
   shieldIcon = Shield;
+  moonIcon = Moon;
+  sunIcon = Sun;
+
+  get isDarkMode(): boolean {
+    return this.themeService.theme() === 'dark';
+  }
+
+  get themeIcon() {
+    return this.isDarkMode ? this.sunIcon : this.moonIcon;
+  }
 
   onMenuToggle(): void {
     this.menuToggle.emit();
+  }
+
+  toggleTheme(): void {
+    this.themeService.toggleTheme();
   }
 
   toggleUserMenu(): void {

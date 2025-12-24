@@ -17,8 +17,13 @@ export class ProductGridComponent {
   @Input() cartItems: CartItem[] = [];
   
   addToCart = output<MenuItem>();
+  quantityChanged = output<{ menuItemId: string; quantity: number }>();
 
   onAddToCart(menuItem: MenuItem): void {
     this.addToCart.emit(menuItem);
+  }
+
+  onQuantityChanged(event: { menuItemId: string; quantity: number }): void {
+    this.quantityChanged.emit(event);
   }
 }

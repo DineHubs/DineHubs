@@ -241,6 +241,51 @@
         </div>
       </div>
 
+      <!-- Payment Info Card -->
+      @if (paymentTransaction()) {
+        <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark overflow-hidden">
+          <div class="p-6 md:p-8">
+            <h2 class="text-lg md:text-xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark mb-4">Payment Information</h2>
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-1">Amount</p>
+                <p class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+                  RM {{ paymentTransaction()!.amount.toFixed(2) }}
+                </p>
+              </div>
+              <div>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-1">Provider</p>
+                <p class="text-lg font-semibold text-text-primary-light dark:text-text-primary-dark">
+                  {{ paymentTransaction()!.provider }}
+                </p>
+              </div>
+              <div>
+                <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-1">Status</p>
+                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium"
+                  [ngClass]="{
+                    'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-300': paymentTransaction()!.status === PaymentStatus.Pending,
+                    'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300': paymentTransaction()!.status === PaymentStatus.Authorized,
+                    'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300': paymentTransaction()!.status === PaymentStatus.Captured,
+                    'bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300': paymentTransaction()!.status === PaymentStatus.Failed,
+                    'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300': paymentTransaction()!.status === PaymentStatus.Refunded,
+                    'bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300': paymentTransaction()!.status === PaymentStatus.Voided
+                  }">
+                  {{ getPaymentStatusText() }}
+                </span>
+              </div>
+              @if (paymentTransaction()!.transactionReference) {
+                <div>
+                  <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark mb-1">Reference</p>
+                  <p class="text-sm font-mono text-text-primary-light dark:text-text-primary-dark">
+                    {{ paymentTransaction()!.transactionReference }}
+                  </p>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- Action Buttons -->
       <div class="flex flex-wrap gap-3">
         @if (canCancel()) {
@@ -259,6 +304,40 @@
             <lucide-icon [name]="creditCardIcon" size="18"></lucide-icon>
             <span>Process Payment</span>
           </a>
+        }
+        @if (canVoid()) {
+          <button
+            type="button"
+            class="px-6 py-3 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold transition-all duration-200 active:scale-95 flex items-center gap-2 shadow-md hover:shadow-lg"
+            (click)="openVoidModal()">
+            <lucide-icon [name]="voidIcon" size="18"></lucide-icon>
+            <span>Void Payment</span>
+          </button>
+        }
+        @if (canRefund()) {
+          <button
+            type="button"
+            class="px-6 py-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold transition-all duration-200 active:scale-95 flex items-center gap-2 shadow-md hover:shadow-lg"
+            (click)="openRefundModal()">
+            <lucide-icon [name]="refundIcon" size="18"></lucide-icon>
+            <span>Refund Payment</span>
+          </button>
+        }
+        @if (canPrintKitchenTicket()) {
+          <button
+            type="button"
+            class="px-6 py-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-all duration-200 active:scale-95 flex items-center gap-2 shadow-md hover:shadow-lg"
+            (click)="printKitchenTicket()">
+            <lucide-icon [name]="chefHatIcon" size="18"></lucide-icon>
+            <span>Print Kitchen Ticket</span>
+          </button>
+          <button
+            type="button"
+            class="px-6 py-3 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark font-semibold transition-all duration-200 active:scale-95 flex items-center gap-2"
+            (click)="openKitchenReprintModal()">
+            <lucide-icon [name]="printerIcon" size="18"></lucide-icon>
+            <span>Reprint Kitchen Ticket</span>
+          </button>
         }
         @if (receiptUrl()) {
           <button
@@ -386,6 +465,224 @@
             (click)="confirmReprint()"
             [disabled]="!reprintReason().trim()">
             Reprint
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Void Payment Modal -->
+  @if (showVoidModal()) {
+    <div
+      class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
+      (click)="closeVoidModal()"
+      role="dialog"
+      aria-modal="true">
+      <div
+        class="w-full max-w-md md:max-w-lg bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-hidden flex flex-col z-50"
+        (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
+          <h2 class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">Void Payment</h2>
+          <button
+            type="button"
+            class="p-2 rounded-xl hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95"
+            (click)="closeVoidModal()">
+            <lucide-icon [name]="xIcon" size="24"></lucide-icon>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <p class="text-text-primary-light dark:text-text-primary-dark">
+            Void payment for order <strong>{{ order()!.orderNumber }}</strong>?
+          </p>
+          <p class="text-sm text-orange-600 dark:text-orange-400">
+            This will cancel the payment authorization. No funds will be captured.
+          </p>
+          <div>
+            <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+              Reason for void
+            </label>
+            <textarea
+              [value]="voidReason()"
+              (input)="voidReason.set($any($event.target).value)"
+              placeholder="Enter reason for voiding payment"
+              required
+              rows="4"
+              class="w-full px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 resize-none">
+            </textarea>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-border-light dark:border-border-dark">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95"
+            (click)="closeVoidModal()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white font-semibold transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            (click)="confirmVoid()"
+            [disabled]="!voidReason().trim()">
+            Void Payment
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Refund Payment Modal -->
+  @if (showRefundModal()) {
+    <div
+      class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
+      (click)="closeRefundModal()"
+      role="dialog"
+      aria-modal="true">
+      <div
+        class="w-full max-w-md md:max-w-lg bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-hidden flex flex-col z-50"
+        (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
+          <h2 class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">Refund Payment</h2>
+          <button
+            type="button"
+            class="p-2 rounded-xl hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95"
+            (click)="closeRefundModal()">
+            <lucide-icon [name]="xIcon" size="24"></lucide-icon>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <p class="text-text-primary-light dark:text-text-primary-dark">
+            Process refund for order <strong>{{ order()!.orderNumber }}</strong>?
+          </p>
+          <p class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+            Original Amount: <strong class="text-primary">RM {{ paymentTransaction()!.amount.toFixed(2) }}</strong>
+          </p>
+          
+          <!-- Refund Type Selection -->
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="refundType"
+                value="full"
+                [checked]="refundType() === 'full'"
+                (change)="refundType.set('full')"
+                class="w-4 h-4 text-primary focus:ring-primary">
+              <span class="text-text-primary-light dark:text-text-primary-dark">Full Refund</span>
+            </label>
+            <label class="flex items-center gap-2 cursor-pointer">
+              <input
+                type="radio"
+                name="refundType"
+                value="partial"
+                [checked]="refundType() === 'partial'"
+                (change)="refundType.set('partial')"
+                class="w-4 h-4 text-primary focus:ring-primary">
+              <span class="text-text-primary-light dark:text-text-primary-dark">Partial Refund</span>
+            </label>
+          </div>
+
+          @if (refundType() === 'partial') {
+            <div>
+              <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+                Refund Amount (RM)
+              </label>
+              <input
+                type="number"
+                [value]="refundAmount()"
+                (input)="refundAmount.set(+$any($event.target).value)"
+                [max]="paymentTransaction()!.amount"
+                min="0.01"
+                step="0.01"
+                class="w-full px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200">
+              @if (refundAmount() > paymentTransaction()!.amount) {
+                <p class="mt-1 text-sm text-red-600 dark:text-red-400">Amount cannot exceed original payment</p>
+              }
+            </div>
+          }
+
+          <div>
+            <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+              Reason for refund
+            </label>
+            <textarea
+              [value]="refundReason()"
+              (input)="refundReason.set($any($event.target).value)"
+              placeholder="Enter reason for refund"
+              required
+              rows="4"
+              class="w-full px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 resize-none">
+            </textarea>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-border-light dark:border-border-dark">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95"
+            (click)="closeRefundModal()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-semibold transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            (click)="confirmRefund()"
+            [disabled]="!isRefundValid()">
+            Process Refund
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Kitchen Reprint Modal -->
+  @if (showKitchenReprintModal()) {
+    <div
+      class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
+      (click)="closeKitchenReprintModal()"
+      role="dialog"
+      aria-modal="true">
+      <div
+        class="w-full max-w-md md:max-w-lg bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-hidden flex flex-col z-50"
+        (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
+          <h2 class="text-2xl font-bold text-text-primary-light dark:text-text-primary-dark">Reprint Kitchen Ticket</h2>
+          <button
+            type="button"
+            class="p-2 rounded-xl hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95"
+            (click)="closeKitchenReprintModal()">
+            <lucide-icon [name]="xIcon" size="24"></lucide-icon>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <p class="text-text-primary-light dark:text-text-primary-dark">
+            Reprint kitchen ticket for order <strong>{{ order()!.orderNumber }}</strong>?
+          </p>
+          <div>
+            <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+              Reason for reprint
+            </label>
+            <textarea
+              [value]="kitchenReprintReason()"
+              (input)="kitchenReprintReason.set($any($event.target).value)"
+              placeholder="Enter reason for reprinting kitchen ticket"
+              required
+              rows="4"
+              class="w-full px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 resize-none">
+            </textarea>
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-border-light dark:border-border-dark">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95"
+            (click)="closeKitchenReprintModal()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            (click)="confirmKitchenReprint()"
+            [disabled]="!kitchenReprintReason().trim()">
+            Reprint Ticket
           </button>
         </div>
       </div>

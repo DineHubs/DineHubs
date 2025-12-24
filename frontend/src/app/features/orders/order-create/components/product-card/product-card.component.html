@@ -1,37 +1,59 @@
 <div 
-  class="group relative bg-white dark:bg-gray-800 rounded-lg shadow hover:shadow-md transition-all duration-200 overflow-hidden cursor-pointer active:scale-95 border border-gray-200 dark:border-gray-700"
-  (click)="onAddToCart()"
+  class="group relative bg-white dark:bg-gray-800 rounded-lg transition-all duration-200 border"
+  [ngClass]="{
+    'border-green-500 ring-2 ring-green-500/20': quantity() > 0,
+    'border-gray-200 dark:border-gray-700 hover:border-primary/50 dark:hover:border-primary/50': quantity() === 0
+  }"
   role="button"
   tabindex="0"
-  [attr.aria-label]="'Add ' + menuItem.name + ' to cart'"
-  (keydown.enter)="onAddToCart(); $event.preventDefault()"
-  (keydown.space)="onAddToCart(); $event.preventDefault()">
+  [attr.aria-label]="'Add ' + menuItem.name + ' to cart'">
   
-  <!-- Product Content - Compact -->
-  <div class="p-3 flex flex-col h-full min-h-[120px]">
-    <!-- Item Name -->
-    <h3 class="font-medium text-gray-900 dark:text-white text-sm mb-auto leading-tight line-clamp-2">
-      {{ menuItem.name }}
-    </h3>
-    
-    <!-- Price -->
-    <div class="mt-2 mb-1">
-      <span class="text-base font-bold text-gray-900 dark:text-white">
-        RM{{ menuItem.price | number:'1.2-2' }}
-      </span>
-    </div>
-  </div>
-
-  <!-- Category Color Strip at Bottom -->
+  <!-- Category Color Strip at Left -->
   <div 
-    class="h-1 w-full"
+    class="absolute left-0 top-0 bottom-0 w-1 rounded-l-lg"
     [ngClass]="getCategoryColor(menuItem.category)">
   </div>
 
-  <!-- Quantity Badge -->
-  @if (quantity() > 0) {
-    <div class="absolute top-2 right-2 bg-black text-white rounded w-6 h-6 flex items-center justify-center text-xs font-bold shadow-md">
-      {{ quantity() }}
+  <!-- Product Content -->
+  <div class="pl-4 pr-3 py-3 flex items-center justify-between gap-3 min-h-[64px]">
+    <!-- Name & Price -->
+    <div class="flex-1 min-w-0 cursor-pointer flex flex-col justify-center" (click)="onAddToCart()">
+      <h3 class="text-sm font-medium text-gray-900 dark:text-white leading-tight truncate">
+        {{ menuItem.name }}
+      </h3>
+      <span class="text-sm font-semibold text-primary mt-0.5">
+        RM{{ menuItem.price | number:'1.2-2' }}
+      </span>
     </div>
-  }
+
+    <!-- Quantity Controls -->
+    <div class="flex items-center flex-shrink-0">
+      @if (quantity() > 0) {
+        <!-- Minus Button -->
+        <button
+          type="button"
+          class="w-8 h-8 flex items-center justify-center rounded-l-md bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600 active:bg-gray-300 dark:active:bg-gray-500 transition-colors active:scale-95 touch-manipulation"
+          (click)="onDecrement($event)"
+          [attr.aria-label]="'Remove one ' + menuItem.name">
+          <lucide-icon [name]="minusIcon" size="16"></lucide-icon>
+        </button>
+        <!-- Quantity Display -->
+        <div class="w-8 h-8 flex items-center justify-center bg-white dark:bg-gray-800 text-sm font-bold text-gray-900 dark:text-white border-y border-gray-200 dark:border-gray-600">
+          {{ quantity() }}
+        </div>
+      }
+      <!-- Plus Button -->
+      <button
+        type="button"
+        [ngClass]="{
+          'rounded-md': quantity() === 0,
+          'rounded-r-md': quantity() > 0
+        }"
+        class="w-8 h-8 flex items-center justify-center bg-primary text-white hover:bg-primary/90 active:bg-primary/80 transition-colors active:scale-95 touch-manipulation"
+        (click)="onIncrement($event)"
+        [attr.aria-label]="'Add ' + menuItem.name + ' to cart'">
+        <lucide-icon [name]="plusIcon" size="16"></lucide-icon>
+      </button>
+    </div>
+  </div>
 </div>

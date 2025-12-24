@@ -1,7 +1,7 @@
-import { Component, Input, output, computed } from '@angular/core';
+import { Component, Input, input, output, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MenuItem } from '../../../../../core/models/menu-item.model';
-import { LucideAngularModule, Plus } from 'lucide-angular';
+import { LucideAngularModule, Plus, Minus } from 'lucide-angular';
 import { CartItem } from '../../order-create.component';
 
 @Component({
@@ -13,14 +13,17 @@ import { CartItem } from '../../order-create.component';
 })
 export class ProductCardComponent {
   @Input({ required: true }) menuItem!: MenuItem;
-  @Input() cartItems: CartItem[] = [];
+  cartItems = input<CartItem[]>([]);
   
   addToCart = output<MenuItem>();
+  quantityChanged = output<{ menuItemId: string; quantity: number }>();
   
   plusIcon = Plus;
+  minusIcon = Minus;
 
   quantity = computed(() => {
-    const cartItem = this.cartItems.find(item => item.menuItem.id === this.menuItem.id);
+    const items = this.cartItems();
+    const cartItem = items.find(item => item.menuItem.id === this.menuItem.id);
     return cartItem ? cartItem.quantity : 0;
   });
 
@@ -56,5 +59,21 @@ export class ProductCardComponent {
 
   onAddToCart(): void {
     this.addToCart.emit(this.menuItem);
+  }
+
+  onIncrement(event: Event): void {
+    event.stopPropagation();
+    this.addToCart.emit(this.menuItem);
+  }
+
+  onDecrement(event: Event): void {
+    event.stopPropagation();
+    const currentQty = this.quantity();
+    if (currentQty > 0) {
+      this.quantityChanged.emit({ 
+        menuItemId: this.menuItem.id, 
+        quantity: currentQty - 1 
+      });
+    }
   }
 }

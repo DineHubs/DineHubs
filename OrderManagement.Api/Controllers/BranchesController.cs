@@ -38,6 +38,7 @@ public class BranchesController(
     }
 
     [HttpGet]
+    [Authorize(Roles = $"{SystemRoles.Admin},{SystemRoles.Manager}")]
     public async Task<IActionResult> GetBranches(CancellationToken cancellationToken)
     {
         try

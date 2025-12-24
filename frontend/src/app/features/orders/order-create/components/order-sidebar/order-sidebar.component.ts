@@ -19,6 +19,7 @@ export class OrderSidebarComponent {
   @Input({ required: true }) tableNumber!: string;
   @Input({ required: true }) isTakeAway!: boolean;
   @Input() isSubmitting = false;
+  @Input() isDrawerMode = false;
 
   quantityChanged = output<{ item: CartItem; change: number }>();
   removed = output<CartItem>();

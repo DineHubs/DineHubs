@@ -1,11 +1,14 @@
 <div class="flex h-screen overflow-hidden bg-bg-light dark:bg-bg-dark">
-  <!-- Sidebar -->
+  <!-- Sidebar - Desktop: collapsible via margin, Mobile: fixed overlay -->
   <aside
-    class="w-64 bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark flex-shrink-0 transition-transform duration-300 ease-in-out overflow-hidden"
-    [class.-translate-x-full]="!sidenavOpened() && isMobile()"
-    [class.fixed]="isMobile()"
-    [class.z-30]="isMobile()"
-    [class.h-full]="isMobile()">
+    class="bg-surface-light dark:bg-surface-dark border-r border-border-light dark:border-border-dark flex-shrink-0 transition-all duration-300 ease-in-out overflow-hidden w-56"
+    [ngClass]="{
+      'fixed inset-y-0 left-0 z-50': isMobile(),
+      '-translate-x-full': isMobile() && !sidenavOpened(),
+      'translate-x-0': isMobile() && sidenavOpened(),
+      '-ml-56': !isMobile() && !sidenavOpened(),
+      'ml-0': !isMobile() && sidenavOpened()
+    }">
     <div class="h-full flex flex-col">
       <div class="flex-1 overflow-y-auto">
         <app-sidebar></app-sidebar>
@@ -13,10 +16,10 @@
     </div>
   </aside>
 
-  <!-- Backdrop for mobile -->
+  <!-- Backdrop for mobile - only when sidebar is open -->
   @if (isMobile() && sidenavOpened()) {
     <div
-      class="fixed inset-0 bg-black/50 backdrop-blur-sm z-40"
+      class="fixed inset-0 bg-black/50 z-40"
       (click)="toggleSidenav()">
     </div>
   }

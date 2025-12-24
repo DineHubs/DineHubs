@@ -1,11 +1,13 @@
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router, RouterModule } from '@angular/router';
-import { LucideAngularModule, ArrowLeft, X, Trash2, CreditCard, Receipt, Printer, FileText, CheckCircle2, ChefHat, Clock, Truck, XCircle, Plus, Minus, AlertCircle } from 'lucide-angular';
+import { LucideAngularModule, ArrowLeft, X, Trash2, CreditCard, Receipt, Printer, FileText, CheckCircle2, ChefHat, Clock, Truck, XCircle, Plus, Minus, AlertCircle, RotateCcw, Ban, Send } from 'lucide-angular';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { PrintService } from '../../../core/services/print.service';
+import { PaymentService, PaymentStatus, PaymentTransaction } from '../../../core/services/payment.service';
+import { KitchenPrintService } from '../../../core/services/kitchen-print.service';
 import { Order, OrderStatus, CancelOrderRequest, UpdateOrderLineRequest, Payment, ReprintReceiptRequest } from '../../../core/models/order.model';
 
 @Component({
@@ -26,16 +28,27 @@ export class OrderDetailsComponent implements OnInit {
   private router = inject(Router);
   private toastService = inject(ToastService);
   private printService = inject(PrintService);
+  private paymentService = inject(PaymentService);
+  private kitchenPrintService = inject(KitchenPrintService);
 
   order = signal<Order | null>(null);
   payment = signal<Payment | null>(null);
+  paymentTransaction = signal<PaymentTransaction | null>(null);
   receiptUrl = signal<string | null>(null);
 
   // Modal states
   showCancelModal = signal<boolean>(false);
   showReprintModal = signal<boolean>(false);
+  showRefundModal = signal<boolean>(false);
+  showVoidModal = signal<boolean>(false);
+  showKitchenReprintModal = signal<boolean>(false);
   cancelReason = signal<string>('');
   reprintReason = signal<string>('');
+  refundReason = signal<string>('');
+  refundAmount = signal<number>(0);
+  refundType = signal<'full' | 'partial'>('full');
+  voidReason = signal<string>('');
+  kitchenReprintReason = signal<string>('');
 
   // Icons
   arrowLeftIcon = ArrowLeft;
@@ -53,6 +66,9 @@ export class OrderDetailsComponent implements OnInit {
   plusIcon = Plus;
   minusIcon = Minus;
   alertCircleIcon = AlertCircle;
+  refundIcon = RotateCcw;
+  voidIcon = Ban;
+  sendIcon = Send;
 
   ngOnInit(): void {
     const id = this.route.snapshot.paramMap.get('id');
@@ -85,6 +101,21 @@ export class OrderDetailsComponent implements OnInit {
       error: (error) => {
         if (error.status !== 404) {
           console.error('Error loading payment:', error);
+        }
+      }
+    });
+
+    // Also load payment transaction for void/refund status
+    this.paymentService.getPaymentByOrderId(orderId).subscribe({
+      next: (transaction) => {
+        this.paymentTransaction.set(transaction);
+        if (transaction) {
+          this.refundAmount.set(transaction.amount);
+        }
+      },
+      error: (error) => {
+        if (error.status !== 404) {
+          console.error('Error loading payment transaction:', error);
         }
       }
     });
@@ -270,6 +301,163 @@ export class OrderDetailsComponent implements OnInit {
 
   get OrderStatus() {
     return OrderStatus;
+  }
+
+  get PaymentStatus() {
+    return PaymentStatus;
+  }
+
+  // Void/Refund Methods
+  canVoid(): boolean {
+    const transaction = this.paymentTransaction();
+    return transaction ? this.paymentService.canVoid(transaction) : false;
+  }
+
+  canRefund(): boolean {
+    const transaction = this.paymentTransaction();
+    return transaction ? this.paymentService.canRefund(transaction) : false;
+  }
+
+  openVoidModal(): void {
+    this.voidReason.set('');
+    this.showVoidModal.set(true);
+  }
+
+  closeVoidModal(): void {
+    this.showVoidModal.set(false);
+    this.voidReason.set('');
+  }
+
+  confirmVoid(): void {
+    const order = this.order();
+    const transaction = this.paymentTransaction();
+    if (!order || !transaction || !this.voidReason().trim()) return;
+
+    this.paymentService.voidPayment(transaction.id, { reason: this.voidReason().trim() }).subscribe({
+      next: () => {
+        this.toastService.success('Payment voided successfully');
+        this.closeVoidModal();
+        this.loadOrder(order.id);
+      },
+      error: (error) => {
+        console.error('Error voiding payment:', error);
+        const errorMessage = error.error?.message || 'Failed to void payment';
+        this.toastService.error(errorMessage);
+      }
+    });
+  }
+
+  openRefundModal(): void {
+    this.refundReason.set('');
+    this.refundType.set('full');
+    const transaction = this.paymentTransaction();
+    if (transaction) {
+      this.refundAmount.set(transaction.amount);
+    }
+    this.showRefundModal.set(true);
+  }
+
+  closeRefundModal(): void {
+    this.showRefundModal.set(false);
+    this.refundReason.set('');
+    this.refundType.set('full');
+  }
+
+  isRefundValid(): boolean {
+    if (!this.refundReason().trim()) return false;
+    const transaction = this.paymentTransaction();
+    if (!transaction) return false;
+    if (this.refundType() === 'partial') {
+      return this.refundAmount() > 0 && this.refundAmount() <= transaction.amount;
+    }
+    return true;
+  }
+
+  confirmRefund(): void {
+    const order = this.order();
+    const transaction = this.paymentTransaction();
+    if (!order || !transaction || !this.isRefundValid()) return;
+
+    const amount = this.refundType() === 'full' ? transaction.amount : this.refundAmount();
+    
+    this.paymentService.refundPayment(transaction.id, { 
+      amount, 
+      reason: this.refundReason().trim() 
+    }).subscribe({
+      next: () => {
+        this.toastService.success('Payment refunded successfully');
+        this.closeRefundModal();
+        this.loadOrder(order.id);
+      },
+      error: (error) => {
+        console.error('Error refunding payment:', error);
+        const errorMessage = error.error?.message || 'Failed to process refund';
+        this.toastService.error(errorMessage);
+      }
+    });
+  }
+
+  getPaymentStatusText(): string {
+    const transaction = this.paymentTransaction();
+    if (!transaction) return '';
+    return this.paymentService.getStatusText(transaction.status);
+  }
+
+  // Kitchen Print Methods
+  canPrintKitchenTicket(): boolean {
+    const order = this.order();
+    if (!order) return false;
+    // Can print/reprint for Submitted or InPreparation orders
+    return order.status === OrderStatus.Submitted || order.status === OrderStatus.InPreparation;
+  }
+
+  printKitchenTicket(): void {
+    const order = this.order();
+    if (!order) return;
+
+    this.kitchenPrintService.printKitchenTicket(order.id).subscribe({
+      next: (result) => {
+        this.toastService.success('Kitchen ticket printed');
+        if (result.ticket) {
+          this.kitchenPrintService.printTicketLocal(result.ticket);
+        }
+      },
+      error: (error) => {
+        console.error('Error printing kitchen ticket:', error);
+        const errorMessage = error.error?.message || 'Failed to print kitchen ticket';
+        this.toastService.error(errorMessage);
+      }
+    });
+  }
+
+  openKitchenReprintModal(): void {
+    this.kitchenReprintReason.set('');
+    this.showKitchenReprintModal.set(true);
+  }
+
+  closeKitchenReprintModal(): void {
+    this.showKitchenReprintModal.set(false);
+    this.kitchenReprintReason.set('');
+  }
+
+  confirmKitchenReprint(): void {
+    const order = this.order();
+    if (!order || !this.kitchenReprintReason().trim()) return;
+
+    this.kitchenPrintService.reprintKitchenTicket(order.id, this.kitchenReprintReason().trim()).subscribe({
+      next: (result) => {
+        this.toastService.success('Kitchen ticket reprinted');
+        this.closeKitchenReprintModal();
+        if (result.ticket) {
+          this.kitchenPrintService.printTicketLocal(result.ticket);
+        }
+      },
+      error: (error) => {
+        console.error('Error reprinting kitchen ticket:', error);
+        const errorMessage = error.error?.message || 'Failed to reprint kitchen ticket';
+        this.toastService.error(errorMessage);
+      }
+    });
   }
 
   formatDate(dateString: string): string {

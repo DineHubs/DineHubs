@@ -1,12 +1,19 @@
 import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { CommonModule, NgClass } from '@angular/common';
 import { Router } from '@angular/router';
-import { LucideAngularModule, RefreshCw, ChefHat, Play, CheckCircle2, Clock, AlertCircle } from 'lucide-angular';
+import { LucideAngularModule, RefreshCw, ChefHat, Play, CheckCircle2, Clock, AlertCircle, CreditCard } from 'lucide-angular';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Order, OrderStatus } from '../../../core/models/order.model';
 import { interval, Subscription } from 'rxjs';
+
+interface CanSubmitToKitchenResult {
+  canSubmit: boolean;
+  requiresPayment: boolean;
+  paymentStatus: string | null;
+  message: string | null;
+}
 
 @Component({
   selector: 'app-kitchen-display',
@@ -37,6 +44,12 @@ export class KitchenDisplayComponent implements OnInit, OnDestroy {
   checkCircleIcon = CheckCircle2;
   clockIcon = Clock;
   alertCircleIcon = AlertCircle;
+  creditCardIcon = CreditCard;
+
+  // Payment warning state
+  showPaymentWarningModal = signal<boolean>(false);
+  paymentWarningOrder = signal<Order | null>(null);
+  paymentWarningMessage = signal<string>('');
 
   ngOnInit(): void {
     this.loadOrders();
@@ -69,7 +82,32 @@ export class KitchenDisplayComponent implements OnInit, OnDestroy {
     });
   }
 
-  updateOrderStatus(orderId: string, status: OrderStatus): void {
+  updateOrderStatus(orderId: string, status: OrderStatus, order?: Order): void {
+    // For InPreparation, check payment requirement first
+    if (status === OrderStatus.InPreparation) {
+      this.apiService.get<CanSubmitToKitchenResult>(`Orders/${orderId}/can-submit-to-kitchen`).subscribe({
+        next: (result) => {
+          if (result.canSubmit) {
+            this.performStatusUpdate(orderId, status);
+          } else {
+            // Show payment warning modal
+            this.paymentWarningMessage.set(result.message || 'Payment is required before starting preparation');
+            this.paymentWarningOrder.set(order || null);
+            this.showPaymentWarningModal.set(true);
+          }
+        },
+        error: (error) => {
+          console.error('Error checking kitchen submission eligibility:', error);
+          // Proceed with update anyway - let backend handle validation
+          this.performStatusUpdate(orderId, status);
+        }
+      });
+    } else {
+      this.performStatusUpdate(orderId, status);
+    }
+  }
+
+  private performStatusUpdate(orderId: string, status: OrderStatus): void {
     this.apiService.patch(`Orders/${orderId}/status?status=${status}`, {}).subscribe({
       next: () => {
         this.loadOrders();
@@ -77,9 +115,16 @@ export class KitchenDisplayComponent implements OnInit, OnDestroy {
       },
       error: (error) => {
         console.error('Error updating order status:', error);
-        this.toastService.error('Failed to update order status');
+        const errorMessage = error.error?.message || error.error?.Message || 'Failed to update order status';
+        this.toastService.error(errorMessage);
       }
     });
+  }
+
+  closePaymentWarningModal(): void {
+    this.showPaymentWarningModal.set(false);
+    this.paymentWarningOrder.set(null);
+    this.paymentWarningMessage.set('');
   }
 
   getStatusText(status: number | OrderStatus): string {

@@ -149,6 +149,7 @@ public static class DependencyInjection
         services.AddScoped<IQrOrderingService, QrOrderingService>();
         services.AddScoped<IOrderService, OrderService>();
         services.AddScoped<IKitchenService, KitchenService>();
+        services.AddScoped<IKitchenPrintService, KitchenPrintService>();
         services.AddScoped<IDashboardService, DashboardService>();
         services.AddScoped<INavigationMenuService, NavigationMenuService>();
         services.AddScoped<IMenuManagementService, MenuManagementService>();

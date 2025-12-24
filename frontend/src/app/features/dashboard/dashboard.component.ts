@@ -5,6 +5,7 @@ import { LucideAngularModule, RefreshCw, AlertCircle, LayoutDashboard, ShoppingC
 import { ToastService } from '../../core/services/toast.service';
 import { DashboardService } from '../../core/services/dashboard.service';
 import { AuthService } from '../../core/services/auth.service';
+import { BranchContextService, Branch } from '../../core/services/branch-context.service';
 import { AppRoles } from '../../core/constants/roles.constants';
 import {
   DashboardStats,
@@ -39,6 +40,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   private dashboardService = inject(DashboardService);
   private authService = inject(AuthService);
   private toastService = inject(ToastService);
+  private branchContextService = inject(BranchContextService);
   private destroy$ = new Subject<void>();
 
   // Icons
@@ -68,6 +70,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   hasError = signal(false);
   errorMessage = signal('');
   selectedPeriod = signal<'today' | 'week' | 'month' | 'year'>('today');
+  
+  // Branch selection (Admin only)
+  branches = signal<Branch[]>([]);
+  selectedBranchId = signal<string | null>(null);
+  branchesLoading = signal(false);
   
   // Stats cards
   statCards: Array<{
@@ -104,6 +111,17 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.checkUserRoles();
+    
+    // Load branches for Admin or Manager role only
+    if (this.isAdmin || this.isManager) {
+      this.loadBranches();
+    } else {
+      // Clear any stored branch selection for non-admin/manager users
+      this.branchContextService.clearSelection();
+      this.branches.set([]);
+      this.selectedBranchId.set(null);
+    }
+    
     this.loadDashboardData();
     
     // Auto-refresh every 60 seconds
@@ -112,6 +130,34 @@ export class DashboardComponent implements OnInit, OnDestroy {
       .subscribe(() => {
         this.loadDashboardData();
       });
+  }
+
+  private loadBranches(): void {
+    this.branchesLoading.set(true);
+    this.branchContextService.loadBranches().subscribe({
+      next: (branches) => {
+        this.branches.set(branches);
+        this.branchesLoading.set(false);
+        
+        // Restore selected branch from context
+        const selectedBranch = this.branchContextService.selectedBranch();
+        if (selectedBranch) {
+          this.selectedBranchId.set(selectedBranch.id);
+        }
+      },
+      error: (error) => {
+        console.error('Error loading branches:', error);
+        this.branchesLoading.set(false);
+        this.branches.set([]);
+      }
+    });
+  }
+
+  onBranchChange(branchId: string): void {
+    const newBranchId = branchId === '' ? null : branchId;
+    this.selectedBranchId.set(newBranchId);
+    this.branchContextService.selectBranchById(newBranchId);
+    this.loadDashboardData();
   }
 
   ngOnDestroy(): void {
@@ -160,9 +206,10 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.hasError.set(false);
     this.errorMessage.set('');
     const { from, to } = this.getDateRange(this.selectedPeriod());
+    const branchId = this.selectedBranchId();
 
     // Load stats
-    this.dashboardService.getStats(from, to).subscribe({
+    this.dashboardService.getStats(from, to, branchId).subscribe({
       next: (stats) => {
         try {
           this.stats = stats;
@@ -182,7 +229,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
     // Load charts based on roles
     if (this.isManager || this.isAdmin) {
-      this.loadManagerCharts(from, to);
+      this.loadManagerCharts(from, to, branchId);
     }
 
     if (this.isSuperAdmin) {
@@ -190,7 +237,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     if (this.isKitchen) {
-      this.loadKitchenCharts();
+      this.loadKitchenCharts(branchId);
     }
   }
 
@@ -201,9 +248,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.toastService.error(message);
   }
 
-  private loadManagerCharts(from: Date, to: Date): void {
+  private loadManagerCharts(from: Date, to: Date, branchId: string | null): void {
     // Sales trend
-    this.dashboardService.getSalesTrend(from, to).subscribe({
+    this.dashboardService.getSalesTrend(from, to, branchId).subscribe({
       next: (data) => {
         try {
           this.salesTrend = data || [];
@@ -220,7 +267,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
 
     // Top selling items
-    this.dashboardService.getTopItems(10, from, to).subscribe({
+    this.dashboardService.getTopItems(10, from, to, branchId).subscribe({
       next: (items) => {
         try {
           this.topItems = items || [];
@@ -243,7 +290,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
 
     // Orders by status
-    this.dashboardService.getOrdersByStatus(from, to).subscribe({
+    this.dashboardService.getOrdersByStatus(from, to, branchId).subscribe({
       next: (data) => {
         try {
           this.ordersByStatus = data || [];
@@ -266,7 +313,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
 
     // Orders by hour (today)
-    this.dashboardService.getOrdersByHour(new Date()).subscribe({
+    this.dashboardService.getOrdersByHour(new Date(), branchId).subscribe({
       next: (data) => {
         try {
           this.ordersByHour = data || [];
@@ -289,9 +336,9 @@ export class DashboardComponent implements OnInit, OnDestroy {
     });
   }
 
-  private loadKitchenCharts(): void {
+  private loadKitchenCharts(branchId: string | null): void {
     const { from, to } = this.getDateRange('today');
-    this.dashboardService.getOrdersByStatus(from, to).subscribe({
+    this.dashboardService.getOrdersByStatus(from, to, branchId).subscribe({
       next: (data) => {
         try {
           this.ordersByStatus = (data || []).filter(d => 
@@ -362,7 +409,42 @@ export class DashboardComponent implements OnInit, OnDestroy {
     try {
       if (!this.stats) return;
 
-      this.statCards = [
+      this.statCards = [];
+
+      // Waiter sees their own stats instead of overall branch stats
+      if (this.isWaiter && !this.isManager && !this.isAdmin) {
+        this.statCards.push(
+          {
+            title: 'My Orders Today',
+            value: this.stats.myOrdersTodayCount.toString(),
+            icon: 'receipt',
+            color: '#1976d2',
+            route: '/orders'
+          },
+          {
+            title: 'My Revenue Today',
+            value: `RM ${this.stats.myOrdersTodayRevenue.toFixed(2)}`,
+            icon: 'attach_money',
+            color: '#388e3c'
+          },
+          {
+            title: 'Active Tables',
+            value: this.stats.activeTablesCount.toString(),
+            icon: 'table_restaurant',
+            color: '#f57c00',
+            route: '/tables'
+          },
+          {
+            title: 'Pending Orders',
+            value: this.stats.pendingOrdersCount.toString(),
+            icon: 'pending_actions',
+            color: '#d32f2f',
+            route: '/kitchen'
+          }
+        );
+      } else {
+        // Non-waiter roles see overall stats
+        this.statCards.push(
       {
         title: 'Today\'s Orders',
         value: this.stats.todayOrdersCount.toString(),
@@ -391,7 +473,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
         color: '#d32f2f',
         route: '/kitchen'
       }
-    ];
+        );
+      }
 
     // Add role-specific stats
     if (this.isManager || this.isAdmin || this.isSuperAdmin) {

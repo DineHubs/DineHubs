@@ -1,54 +1,52 @@
 <nav class="h-full overflow-y-auto">
-  <div class="p-4 space-y-1">
+  <div class="p-2 space-y-0.5">
     @if (menuItems().length === 0) {
-      <div class="p-4 text-center text-text-secondary-light dark:text-text-secondary-dark text-sm">
+      <div class="p-3 text-center text-text-secondary-light dark:text-text-secondary-dark text-xs">
         <p>No menu items available</p>
       </div>
     } @else {
       @for (item of menuItems(); track item.id) {
         @if (hasChildren(item)) {
           <!-- Parent Item with Children -->
-          <div class="space-y-1">
+          <div class="space-y-0.5">
             <button
               type="button"
-              class="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all duration-200 hover:bg-border-light dark:hover:bg-border-dark active:scale-95"
+              class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-all duration-200 hover:bg-border-light dark:hover:bg-border-dark active:scale-[0.98]"
               (click)="toggleExpanded(item.id)"
               [attr.aria-expanded]="isExpanded(item.id)"
               [attr.aria-label]="item.label">
               <lucide-icon 
                 [name]="getIcon(item.icon)" 
-                size="20" 
+                size="18" 
                 class="text-text-secondary-light dark:text-text-secondary-dark flex-shrink-0"
                 [class.invisible]="!hasIcon(item.icon)">
               </lucide-icon>
-              <span class="flex-1 font-medium text-text-primary-light dark:text-text-primary-dark">{{ item.label }}</span>
+              <span class="flex-1 text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate">{{ item.label }}</span>
               <lucide-icon 
                 [name]="isExpanded(item.id) ? chevronDownIcon : chevronRightIcon" 
-                size="18" 
-                class="text-text-secondary-light dark:text-text-secondary-dark transition-transform duration-200"
-                [class.rotate-90]="isExpanded(item.id)">
+                size="14" 
+                class="text-text-secondary-light dark:text-text-secondary-dark transition-transform duration-200 flex-shrink-0">
               </lucide-icon>
             </button>
             
             <!-- Children Items -->
             @if (isExpanded(item.id)) {
-              <div class="ml-4 space-y-1 border-l-2 border-border-light dark:border-border-dark pl-4">
+              <div class="ml-3 space-y-0.5 border-l border-border-light dark:border-border-dark pl-3">
                 @for (child of item.children; track child.id) {
                   <button
                     type="button"
                     (click)="navigateTo(child.route)"
                     [ngClass]="{
-                      'w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm transition-all duration-200 hover:bg-border-light dark:hover:bg-border-dark active:scale-95 text-left': true,
-                      'bg-primary/10 dark:bg-primary/20': isActive(child.route),
-                      'text-primary': isActive(child.route)
+                      'w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-xs transition-all duration-200 hover:bg-border-light dark:hover:bg-border-dark active:scale-[0.98] text-left': true,
+                      'bg-primary/10 dark:bg-primary/20 text-primary': isActive(child.route)
                     }">
                     <lucide-icon 
                       [name]="getIcon(child.icon)" 
-                      size="18" 
+                      size="14" 
                       class="flex-shrink-0"
                       [class.invisible]="!hasIcon(child.icon)">
                     </lucide-icon>
-                    <span class="font-medium">{{ child.label }}</span>
+                    <span class="font-medium truncate">{{ child.label }}</span>
                   </button>
                 }
               </div>
@@ -60,13 +58,12 @@
             type="button"
             (click)="navigateTo(item.route)"
             [ngClass]="{
-              'w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 hover:bg-border-light dark:hover:bg-border-dark active:scale-95 text-left': true,
-              'bg-primary/10 dark:bg-primary/20': isActive(item.route),
-              'text-primary': isActive(item.route)
+              'w-full flex items-center gap-2.5 px-3 py-2 rounded-lg transition-all duration-200 hover:bg-border-light dark:hover:bg-border-dark active:scale-[0.98] text-left': true,
+              'bg-primary/10 dark:bg-primary/20': isActive(item.route)
             }">
             <lucide-icon 
               [name]="getIcon(item.icon)" 
-              size="20" 
+              size="18" 
               [ngClass]="{
                 'text-text-secondary-light dark:text-text-secondary-dark flex-shrink-0': true,
                 'text-primary': isActive(item.route),
@@ -75,7 +72,7 @@
             </lucide-icon>
             <span 
               [ngClass]="{
-                'font-medium text-text-primary-light dark:text-text-primary-dark': true,
+                'text-sm font-medium text-text-primary-light dark:text-text-primary-dark truncate': true,
                 'text-primary': isActive(item.route)
               }">
               {{ item.label }}

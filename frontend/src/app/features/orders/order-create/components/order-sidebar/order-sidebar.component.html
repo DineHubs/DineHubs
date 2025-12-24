@@ -1,60 +1,82 @@
-<div class="h-full flex flex-col bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-xl border border-border-light/50 dark:border-border-dark/50 rounded-2xl shadow-2xl overflow-hidden">
-  <!-- Header -->
-  <div class="p-3 md:p-4 border-b border-border-light dark:border-border-dark">
-    <div class="flex items-center gap-2 mb-3">
-      <div class="p-1.5 rounded-lg bg-primary/10 dark:bg-primary/20">
-        <lucide-icon [name]="shoppingCartIcon" size="20" class="text-primary"></lucide-icon>
+<div 
+  class="h-full flex flex-col overflow-hidden"
+  [ngClass]="{
+    'bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl': !isDrawerMode,
+    'bg-transparent': isDrawerMode
+  }">
+  <!-- Header (hidden in drawer mode since parent has header) -->
+  @if (!isDrawerMode) {
+    <div class="p-2.5 border-b border-border-light dark:border-border-dark flex-shrink-0">
+      <div class="flex items-center gap-2 mb-2">
+        <lucide-icon [name]="shoppingCartIcon" size="16" class="text-primary"></lucide-icon>
+        <h2 class="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">
+          Cart
+        </h2>
+        @if (cartItemCount > 0) {
+          <span class="px-1.5 py-0.5 rounded bg-primary text-white text-[10px] font-bold">
+            {{ cartItemCount }}
+          </span>
+        }
       </div>
-      <h2 class="text-base md:text-lg font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">
-        Order Cart
-      </h2>
-      @if (cartItemCount > 0) {
-        <span class="px-2 py-0.5 rounded-full bg-primary text-white text-xs font-semibold">
-          {{ cartItemCount }}
-        </span>
-      }
-    </div>
 
-    <!-- Order Details Form -->
-    <div class="space-y-3">
-      <div>
-        <label class="block text-xs font-medium text-text-primary-light dark:text-text-primary-dark mb-1.5">
-          Table Number
-        </label>
+      <!-- Order Details Form - Compact -->
+      <div class="flex items-center gap-2">
         <input
           type="text"
           [value]="tableNumber"
           (input)="onTableNumberChange($any($event.target).value)"
           [disabled]="isTakeAway"
-          placeholder="Enter table number"
-          class="w-full px-3 py-2 rounded-lg bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed transition-all text-sm">
+          placeholder="Table #"
+          class="flex-1 px-2 py-1 rounded-md bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 text-xs">
+        <label class="flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+          <input
+            type="checkbox"
+            [checked]="isTakeAway"
+            (change)="onTakeAwayToggle($any($event.target).checked)"
+            class="w-4 h-4 rounded border-border-light dark:border-border-dark text-primary focus:ring-1 focus:ring-primary cursor-pointer">
+          <span class="text-[10px] font-medium text-text-primary-light dark:text-text-primary-dark">
+            Takeaway
+          </span>
+        </label>
       </div>
-
-      <label class="flex items-center gap-3 cursor-pointer">
-        <input
-          type="checkbox"
-          [checked]="isTakeAway"
-          (change)="onTakeAwayToggle($any($event.target).checked)"
-          class="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary focus:ring-2 focus:ring-primary cursor-pointer">
-        <span class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark">
-          Take Away
-        </span>
-      </label>
     </div>
-  </div>
+  } @else {
+    <!-- Drawer mode: just show order details inline -->
+    <div class="p-2.5 border-b border-border-light dark:border-border-dark flex-shrink-0">
+      <div class="flex items-center gap-2">
+        <input
+          type="text"
+          [value]="tableNumber"
+          (input)="onTableNumberChange($any($event.target).value)"
+          [disabled]="isTakeAway"
+          placeholder="Table #"
+          class="flex-1 px-2 py-1.5 rounded-md bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 text-xs">
+        <label class="flex items-center gap-1.5 cursor-pointer whitespace-nowrap">
+          <input
+            type="checkbox"
+            [checked]="isTakeAway"
+            (change)="onTakeAwayToggle($any($event.target).checked)"
+            class="w-4 h-4 rounded border-border-light dark:border-border-dark text-primary focus:ring-1 focus:ring-primary cursor-pointer">
+          <span class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark">
+            Takeaway
+          </span>
+        </label>
+      </div>
+    </div>
+  }
 
   <!-- Cart Items (Scrollable) -->
-  <div class="flex-1 overflow-y-auto px-3 md:px-4 py-2 md:py-3 min-h-0">
+  <div class="flex-1 overflow-y-auto px-2 py-1.5 min-h-0">
     @if (!hasItems()) {
-      <div class="flex flex-col items-center justify-center py-12 text-center">
-        <div class="p-4 rounded-full bg-border-light dark:bg-border-dark mb-4">
-          <lucide-icon [name]="shoppingCartIcon" size="32" class="text-text-secondary-light dark:text-text-secondary-dark"></lucide-icon>
+      <div class="flex flex-col items-center justify-center py-8 text-center">
+        <div class="p-3 rounded-full bg-border-light dark:bg-border-dark mb-2">
+          <lucide-icon [name]="shoppingCartIcon" size="24" class="text-text-secondary-light dark:text-text-secondary-dark"></lucide-icon>
         </div>
-        <p class="text-sm md:text-base font-medium mb-1 text-text-primary-light dark:text-text-primary-dark leading-tight">
-          Your cart is empty
+        <p class="text-xs font-medium text-text-primary-light dark:text-text-primary-dark">
+          Cart is empty
         </p>
-        <p class="text-xs md:text-sm text-text-secondary-light dark:text-text-secondary-dark leading-relaxed">
-          Click on menu items to add them to your cart
+        <p class="text-[10px] text-text-secondary-light dark:text-text-secondary-dark mt-0.5">
+          Tap items to add
         </p>
       </div>
     } @else {
@@ -72,37 +94,36 @@
 
   <!-- Footer (Fixed) -->
   @if (hasItems()) {
-    <div class="p-4 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark">
+    <div class="p-2.5 border-t border-border-light dark:border-border-dark bg-surface-light dark:bg-surface-dark flex-shrink-0">
       <!-- Total -->
-      <div class="flex items-center justify-between mb-3">
-        <span class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
-          Total:
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-semibold text-text-primary-light dark:text-text-primary-dark">
+          Total
         </span>
-        <span class="text-xl font-bold text-primary">
+        <span class="text-base font-bold text-primary">
           RM{{ cartTotal | number:'1.2-2' }}
         </span>
       </div>
 
       <!-- Actions -->
-      <div class="flex gap-2">
+      <div class="flex gap-1.5">
         <button
           type="button"
-          class="flex-1 px-4 py-2.5 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark font-medium hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed text-sm"
+          class="px-3 py-2 rounded-md bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark font-medium hover:bg-border-light dark:hover:bg-border-dark transition-colors active:scale-95 disabled:opacity-50 text-xs"
           (click)="clearCart.emit()"
           [disabled]="isSubmitting">
-          <lucide-icon [name]="trashIcon" size="16" class="inline-block mr-1.5"></lucide-icon>
-          Clear
+          <lucide-icon [name]="trashIcon" size="14" class="inline-block"></lucide-icon>
         </button>
         <button
           type="button"
-          class="flex-1 px-4 py-2.5 rounded-lg bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center shadow-md hover:shadow-lg text-sm"
+          class="flex-1 px-3 py-2 rounded-md bg-primary hover:bg-primary/90 text-white font-semibold transition-colors active:scale-95 disabled:opacity-50 flex items-center justify-center text-xs"
           (click)="checkout.emit()"
           [disabled]="isSubmitting">
           @if (isSubmitting) {
-            <div class="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2"></div>
+            <div class="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-1.5"></div>
             <span>Processing...</span>
           } @else {
-            <lucide-icon [name]="creditCardIcon" size="18" class="inline-block mr-2"></lucide-icon>
+            <lucide-icon [name]="creditCardIcon" size="14" class="mr-1.5"></lucide-icon>
             <span>Checkout</span>
           }
         </button>

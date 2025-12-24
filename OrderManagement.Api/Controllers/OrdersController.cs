@@ -294,6 +294,34 @@ public class OrdersController(
         var code = await qrOrderingService.GenerateSessionAsync(tenantContext.TenantId, tenantContext.BranchId.Value, tableNumber, cancellationToken);
         return Ok(new { Code = code });
     }
+
+    [HttpGet("{id:guid}/can-submit-to-kitchen")]
+    [Authorize(Roles = $"{SystemRoles.Manager},{SystemRoles.Waiter},{SystemRoles.Kitchen}")]
+    public async Task<IActionResult> CanSubmitToKitchen(Guid id, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var result = await orderService.CanSubmitToKitchenAsync(
+                id,
+                tenantContext.TenantId,
+                tenantContext.BranchId,
+                cancellationToken);
+
+            return Ok(new
+            {
+                canSubmit = result.CanSubmit,
+                requiresPayment = result.RequiresPayment,
+                paymentStatus = result.PaymentStatus,
+                message = result.Message
+            });
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Error checking kitchen submission eligibility for order {OrderId}", id);
+            return StatusCode(StatusCodes.Status500InternalServerError, 
+                new { Message = "An error occurred while checking kitchen submission eligibility." });
+        }
+    }
 }
 
 

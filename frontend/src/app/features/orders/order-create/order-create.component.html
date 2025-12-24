@@ -1,56 +1,60 @@
-<div class="min-h-screen bg-bg-light dark:bg-bg-dark p-3 md:p-4">
-  <!-- Header with Search and Theme Toggle -->
-  <div class="mb-3 flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
-    <h1 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">
-      Create New Order
+<div class="h-full bg-bg-light dark:bg-bg-dark p-2 lg:p-3 flex flex-col overflow-hidden">
+  <!-- Compact Header -->
+  <div class="mb-2 flex items-center gap-2">
+    <h1 class="text-base lg:text-lg font-bold text-text-primary-light dark:text-text-primary-dark whitespace-nowrap">
+      New Order
     </h1>
     
-    <div class="flex items-center gap-2 w-full sm:w-auto">
-      <!-- Search Input -->
-      <div class="relative flex-1 sm:flex-initial sm:min-w-[250px]">
-        <lucide-icon [name]="searchIcon" size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark"></lucide-icon>
-        <input
-          type="text"
-          [value]="searchTerm()"
-          (input)="onSearchChange($any($event.target).value)"
-          placeholder="Search menu items..."
-          class="w-full pl-9 pr-3 py-2 rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 text-sm">
-      </div>
-
-      <!-- Theme Toggle -->
-      <button
-        type="button"
-        class="min-w-[40px] min-h-[40px] flex items-center justify-center rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95"
-        (click)="toggleTheme()"
-        [attr.aria-label]="'Switch to ' + (isDarkMode ? 'light' : 'dark') + ' mode'">
-        <lucide-icon [name]="themeIcon" size="18"></lucide-icon>
-      </button>
+    <!-- Search Input -->
+    <div class="relative flex-1 max-w-md">
+      <lucide-icon [name]="searchIcon" size="16" class="absolute left-2.5 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark"></lucide-icon>
+      <input
+        type="text"
+        [value]="searchTerm()"
+        (input)="onSearchChange($any($event.target).value)"
+        placeholder="Search..."
+        class="w-full pl-8 pr-2 py-1.5 rounded-md bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-1 focus:ring-primary transition-all duration-150 text-xs">
     </div>
+
+    <!-- Theme Toggle -->
+    <button
+      type="button"
+      class="w-8 h-8 flex items-center justify-center rounded-md bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark transition-colors active:scale-95"
+      (click)="toggleTheme()"
+      [attr.aria-label]="'Switch to ' + (isDarkMode ? 'light' : 'dark') + ' mode'">
+      <lucide-icon [name]="themeIcon" size="16"></lucide-icon>
+    </button>
   </div>
 
   <!-- Main Layout -->
-  <div class="grid grid-cols-1 md:grid-cols-[1fr_350px] lg:grid-cols-[1fr_380px] xl:grid-cols-[1fr_400px] gap-3 md:gap-4">
+  <div class="flex-1 flex gap-2 min-h-0 overflow-hidden">
     <!-- Left Column: Menu Section -->
-    <div class="space-y-3">
-      <!-- Category Navigation -->
-      <app-category-nav
-        [categories]="categories()"
-        [selectedCategory]="selectedCategory()"
-        (categorySelected)="filterByCategory($event)">
-      </app-category-nav>
+    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+      <!-- Category Navigation (Sticky) -->
+      <div class="flex-shrink-0 mb-2">
+        <app-category-nav
+          [categories]="categories()"
+          [selectedCategory]="selectedCategory()"
+          (categorySelected)="filterByCategory($event)">
+        </app-category-nav>
+      </div>
 
-      <!-- Product Grid -->
-      <app-product-grid
-        [menuItems]="filteredItems()"
-        [isLoading]="isLoading()"
-        [cartItems]="cart()"
-        (addToCart)="addToCart($event)">
-      </app-product-grid>
+      <!-- Product Grid (Scrollable) -->
+      <div class="flex-1 overflow-y-auto pb-20 lg:pb-0">
+        <app-product-grid
+          [menuItems]="filteredItems()"
+          [isLoading]="isLoading()"
+          [cartItems]="cart()"
+          (addToCart)="addToCart($event)"
+          (quantityChanged)="onGridQuantityChange($event)">
+        </app-product-grid>
+      </div>
     </div>
 
-    <!-- Right Column: Order Sidebar -->
-    <div class="lg:sticky lg:top-6 lg:self-start lg:max-h-[calc(100vh-3rem)]">
+    <!-- Right Column: Order Sidebar (Desktop only) -->
+    <div class="hidden lg:flex w-72 xl:w-80 flex-shrink-0">
       <app-order-sidebar
+        class="w-full"
         [cart]="cart()"
         [cartTotal]="cartTotal()"
         [cartItemCount]="cartItemCount()"
@@ -66,6 +70,70 @@
       </app-order-sidebar>
     </div>
   </div>
+
+  <!-- Mobile Floating Cart Button -->
+  @if (isMobileView()) {
+    <button
+      type="button"
+      class="lg:hidden fixed bottom-4 right-4 z-40 w-14 h-14 rounded-full bg-primary text-white shadow-lg flex items-center justify-center hover:bg-primary/90 active:scale-95 transition-all"
+      (click)="toggleCartDrawer()"
+      [attr.aria-label]="'Open cart with ' + cartItemCount() + ' items'">
+      <lucide-icon [name]="cartIcon" size="24"></lucide-icon>
+      @if (cartItemCount() > 0) {
+        <span class="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-error text-white text-xs font-bold flex items-center justify-center">
+          {{ cartItemCount() }}
+        </span>
+      }
+    </button>
+  }
+
+  <!-- Mobile Cart Drawer Backdrop -->
+  @if (isMobileView() && isCartDrawerOpen()) {
+    <div
+      class="lg:hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50"
+      (click)="closeCartDrawer()">
+    </div>
+  }
+
+  <!-- Mobile Cart Drawer -->
+  @if (isMobileView()) {
+    <div
+      class="lg:hidden fixed inset-y-0 right-0 w-80 max-w-[85vw] bg-surface-light dark:bg-surface-dark shadow-2xl z-50 transition-transform duration-300 ease-out flex flex-col"
+      [class.translate-x-full]="!isCartDrawerOpen()"
+      [class.translate-x-0]="isCartDrawerOpen()">
+      <!-- Drawer Header -->
+      <div class="flex items-center justify-between p-3 border-b border-border-light dark:border-border-dark">
+        <h2 class="text-sm font-bold text-text-primary-light dark:text-text-primary-dark">
+          Cart ({{ cartItemCount() }})
+        </h2>
+        <button
+          type="button"
+          class="w-8 h-8 flex items-center justify-center rounded-md hover:bg-border-light dark:hover:bg-border-dark transition-colors"
+          (click)="closeCartDrawer()">
+          <lucide-icon [name]="closeIcon" size="18"></lucide-icon>
+        </button>
+      </div>
+      <!-- Drawer Content -->
+      <div class="flex-1 overflow-hidden">
+        <app-order-sidebar
+          class="h-full"
+          [cart]="cart()"
+          [cartTotal]="cartTotal()"
+          [cartItemCount]="cartItemCount()"
+          [tableNumber]="tableNumber()"
+          [isTakeAway]="isTakeAway()"
+          [isSubmitting]="isSubmitting()"
+          [isDrawerMode]="true"
+          (quantityChanged)="onCartQuantityChange($event)"
+          (removed)="onCartItemRemoved($event)"
+          (tableNumberChanged)="onTableNumberChange($event)"
+          (takeAwayToggled)="onTakeAwayToggle($event)"
+          (clearCart)="clearCart()"
+          (checkout)="onCheckout()">
+        </app-order-sidebar>
+      </div>
+    </div>
+  }
 
   <!-- Checkout Modal -->
   <app-checkout-modal

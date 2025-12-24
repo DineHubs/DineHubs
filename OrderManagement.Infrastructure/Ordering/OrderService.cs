@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Serilog;
 using OrderManagement.Application.Abstractions;
+using OrderManagement.Application.Kitchen;
 using OrderManagement.Application.MenuItems;
 using OrderManagement.Application.Ordering;
 using OrderManagement.Application.Ordering.Models;
@@ -13,6 +14,7 @@ namespace OrderManagement.Infrastructure.Ordering;
 public sealed class OrderService(
     OrderManagementDbContext dbContext,
     IMenuItemService menuItemService,
+    IKitchenPrintService kitchenPrintService,
     Serilog.ILogger logger) : IOrderService
 {
     public async Task<Order> CreateOrderAsync(CreateOrderDto dto, Guid tenantId, Guid branchId, CancellationToken cancellationToken)
@@ -79,6 +81,27 @@ public sealed class OrderService(
 
             logger.Information("Created order {OrderNumber} (Id: {OrderId}) for tenant {TenantId}, branch {BranchId}", 
                 orderNumber, order.Id, tenantId, branchId);
+
+            // Auto-print kitchen ticket for submitted orders
+            try
+            {
+                var printResult = await kitchenPrintService.PrintKitchenTicketAsync(order.Id, cancellationToken);
+                if (printResult.Success)
+                {
+                    logger.Information("Auto-printed kitchen ticket for order {OrderNumber}. PrintJobId: {PrintJobId}", 
+                        orderNumber, printResult.PrintJobId);
+                }
+                else
+                {
+                    logger.Warning("Failed to auto-print kitchen ticket for order {OrderNumber}: {Message}", 
+                        orderNumber, printResult.Message);
+                }
+            }
+            catch (Exception printEx)
+            {
+                // Don't fail order creation if printing fails
+                logger.Warning(printEx, "Error auto-printing kitchen ticket for order {OrderNumber}", orderNumber);
+            }
 
             return order;
         }
@@ -169,6 +192,21 @@ public sealed class OrderService(
                 logger.Warning("Order {OrderId} not found for tenant {TenantId}, branch {BranchId} when updating status", 
                     orderId, tenantId, branchId);
                 throw new InvalidOperationException("Order not found.");
+            }
+
+            // Enforce payment timing validation when transitioning to InPreparation
+            if (status == OrderStatus.InPreparation && order.PaymentTiming == PaymentTiming.PayBeforeKitchen)
+            {
+                // Query payment directly to avoid circular dependency with PaymentService
+                var payment = await dbContext.Payments
+                    .AsNoTracking()
+                    .FirstOrDefaultAsync(p => p.OrderId == orderId && p.TenantId == tenantId, cancellationToken);
+                    
+                if (payment is null || (payment.Status != PaymentStatus.Captured && payment.Status != PaymentStatus.Authorized))
+                {
+                    logger.Warning("Order {OrderId} requires payment before kitchen submission but payment is not complete", orderId);
+                    throw new InvalidOperationException("Payment is required before sending this order to the kitchen. Please process payment first.");
+                }
             }
 
             order.UpdateStatus(status);
@@ -306,6 +344,56 @@ public sealed class OrderService(
             logger.Error(ex, "Error updating line {LineId} quantity in order {OrderId} for tenant {TenantId}, branch {BranchId}", 
                 lineId, orderId, tenantId, branchId);
             throw new InvalidOperationException("An error occurred while updating the order line quantity.");
+        }
+    }
+
+    public async Task<CanSubmitToKitchenResult> CanSubmitToKitchenAsync(Guid orderId, Guid tenantId, Guid? branchId, CancellationToken cancellationToken)
+    {
+        try
+        {
+            // Query order with tenant/branch filtering
+            var query = dbContext.Orders.AsNoTracking().Where(o => o.Id == orderId && o.TenantId == tenantId);
+            
+            if (branchId.HasValue)
+            {
+                query = query.Where(o => o.BranchId == branchId.Value);
+            }
+            
+            var order = await query.FirstOrDefaultAsync(cancellationToken);
+            if (order is null)
+            {
+                return new CanSubmitToKitchenResult(false, false, null, "Order not found.");
+            }
+
+            // If order doesn't require payment before kitchen, it can be submitted
+            if (order.PaymentTiming != PaymentTiming.PayBeforeKitchen)
+            {
+                return new CanSubmitToKitchenResult(true, false, null, null);
+            }
+
+            // Check payment status - query directly to avoid circular dependency
+            var payment = await dbContext.Payments
+                .AsNoTracking()
+                .FirstOrDefaultAsync(p => p.OrderId == orderId && p.TenantId == tenantId, cancellationToken);
+                
+            if (payment is null)
+            {
+                return new CanSubmitToKitchenResult(false, true, "None", "Payment is required before sending this order to the kitchen.");
+            }
+
+            var paymentStatusText = payment.Status.ToString();
+            if (payment.Status == PaymentStatus.Captured || payment.Status == PaymentStatus.Authorized)
+            {
+                return new CanSubmitToKitchenResult(true, true, paymentStatusText, null);
+            }
+
+            return new CanSubmitToKitchenResult(false, true, paymentStatusText, $"Payment status is {paymentStatusText}. Payment must be Authorized or Captured before sending to kitchen.");
+        }
+        catch (Exception ex)
+        {
+            logger.Error(ex, "Error checking if order {OrderId} can be submitted to kitchen for tenant {TenantId}, branch {BranchId}", 
+                orderId, tenantId, branchId);
+            return new CanSubmitToKitchenResult(false, false, null, "An error occurred while checking kitchen submission eligibility.");
         }
     }
 }

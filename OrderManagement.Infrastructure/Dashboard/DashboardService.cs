@@ -14,12 +14,23 @@ public sealed class DashboardService(
     ICurrentUserContext currentUserContext,
     Serilog.ILogger logger) : IDashboardService
 {
-    public async Task<DashboardStatsDto> GetDashboardStatsAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+    /// <summary>
+    /// Gets the effective branch ID to use for filtering.
+    /// If branchId is provided, it takes precedence. Otherwise, falls back to tenant context's branchId.
+    /// </summary>
+    private Guid? GetEffectiveBranchId(Guid? branchId) => branchId ?? tenantContext.BranchId;
+
+    public async Task<DashboardStatsDto> GetDashboardStatsAsync(DateTimeOffset from, DateTimeOffset to, Guid? branchId, CancellationToken cancellationToken)
     {
         try
         {
+            // Convert from/to parameters to UTC to avoid PostgreSQL offset issues
+            var fromUtc = from.ToUniversalTime();
+            var toUtc = to.ToUniversalTime();
+            
+            var effectiveBranchId = GetEffectiveBranchId(branchId);
             var today = DateTimeOffset.UtcNow.Date;
-            var todayStart = new DateTimeOffset(today);
+            var todayStart = new DateTimeOffset(today, TimeSpan.Zero);
             var todayEnd = todayStart.AddDays(1).AddTicks(-1);
             
             var thisMonth = new DateTimeOffset(DateTimeOffset.UtcNow.Year, DateTimeOffset.UtcNow.Month, 1, 0, 0, 0, TimeSpan.Zero);
@@ -27,9 +38,9 @@ public sealed class DashboardService(
 
             // Base query for orders filtered by tenant
             var ordersQuery = dbContext.Orders.AsNoTracking().Where(o => o.TenantId == tenantContext.TenantId);
-            if (tenantContext.BranchId.HasValue)
+            if (effectiveBranchId.HasValue)
             {
-                ordersQuery = ordersQuery.Where(o => o.BranchId == tenantContext.BranchId.Value);
+                ordersQuery = ordersQuery.Where(o => o.BranchId == effectiveBranchId.Value);
             }
 
             // Today's orders count
@@ -86,7 +97,7 @@ public sealed class DashboardService(
                     .Where(o => !string.IsNullOrEmpty(o.TableNumber) && 
                                o.Status != OrderStatus.Delivered && 
                                o.Status != OrderStatus.Paid && 
-                               o.Status != OrderStatus.Cancelled)
+                               o.Status != OrderStatus.Cancelled && o.BranchId ==  tenantContext.BranchId)
                     .Select(o => o.TableNumber)
                     .Distinct()
                     .CountAsync(cancellationToken);
@@ -272,10 +283,11 @@ public sealed class DashboardService(
         }
     }
 
-    public async Task<IReadOnlyCollection<SalesTrendDto>> GetSalesTrendAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<SalesTrendDto>> GetSalesTrendAsync(DateTimeOffset from, DateTimeOffset to, Guid? branchId, CancellationToken cancellationToken)
     {
         try
         {
+            var effectiveBranchId = GetEffectiveBranchId(branchId);
             // Convert to UTC to avoid PostgreSQL offset issues
             var fromUtc = from.ToUniversalTime();
             var toUtc = to.ToUniversalTime();
@@ -285,9 +297,9 @@ public sealed class DashboardService(
                            o.CreatedAt >= fromUtc && 
                            o.CreatedAt <= toUtc);
 
-            if (tenantContext.BranchId.HasValue)
+            if (effectiveBranchId.HasValue)
             {
-                query = query.Where(o => o.BranchId == tenantContext.BranchId.Value);
+                query = query.Where(o => o.BranchId == effectiveBranchId.Value);
             }
 
             var orders = await query
@@ -318,10 +330,11 @@ public sealed class DashboardService(
         }
     }
 
-    public async Task<IReadOnlyCollection<TopSellingItemDto>> GetTopSellingItemsAsync(int count, DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<TopSellingItemDto>> GetTopSellingItemsAsync(int count, DateTimeOffset from, DateTimeOffset to, Guid? branchId, CancellationToken cancellationToken)
     {
         try
         {
+            var effectiveBranchId = GetEffectiveBranchId(branchId);
             // Convert to UTC to avoid PostgreSQL offset issues
             var fromUtc = from.ToUniversalTime();
             var toUtc = to.ToUniversalTime();
@@ -331,9 +344,9 @@ public sealed class DashboardService(
                            o.CreatedAt >= fromUtc && 
                            o.CreatedAt <= toUtc);
 
-            if (tenantContext.BranchId.HasValue)
+            if (effectiveBranchId.HasValue)
             {
-                query = query.Where(o => o.BranchId == tenantContext.BranchId.Value);
+                query = query.Where(o => o.BranchId == effectiveBranchId.Value);
             }
 
             // Use SelectMany to flatten order lines
@@ -370,10 +383,11 @@ public sealed class DashboardService(
         }
     }
 
-    public async Task<IReadOnlyCollection<OrderStatusCountDto>> GetOrdersByStatusAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<OrderStatusCountDto>> GetOrdersByStatusAsync(DateTimeOffset from, DateTimeOffset to, Guid? branchId, CancellationToken cancellationToken)
     {
         try
         {
+            var effectiveBranchId = GetEffectiveBranchId(branchId);
             // Convert to UTC to avoid PostgreSQL offset issues
             var fromUtc = from.ToUniversalTime();
             var toUtc = to.ToUniversalTime();
@@ -383,9 +397,9 @@ public sealed class DashboardService(
                            o.CreatedAt >= fromUtc && 
                            o.CreatedAt <= toUtc);
 
-            if (tenantContext.BranchId.HasValue)
+            if (effectiveBranchId.HasValue)
             {
-                query = query.Where(o => o.BranchId == tenantContext.BranchId.Value);
+                query = query.Where(o => o.BranchId == effectiveBranchId.Value);
             }
 
             var results = await query
@@ -410,10 +424,11 @@ public sealed class DashboardService(
         }
     }
 
-    public async Task<IReadOnlyCollection<OrderHourlyCountDto>> GetOrdersByHourAsync(DateTimeOffset date, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<OrderHourlyCountDto>> GetOrdersByHourAsync(DateTimeOffset date, Guid? branchId, CancellationToken cancellationToken)
     {
         try
         {
+            var effectiveBranchId = GetEffectiveBranchId(branchId);
             // Convert to UTC to avoid PostgreSQL offset issues
             var dateUtc = date.ToUniversalTime();
             var dayStart = new DateTimeOffset(dateUtc.Date, TimeSpan.Zero);
@@ -424,9 +439,9 @@ public sealed class DashboardService(
                            o.CreatedAt >= dayStart && 
                            o.CreatedAt <= dayEnd);
 
-            if (tenantContext.BranchId.HasValue)
+            if (effectiveBranchId.HasValue)
             {
-                query = query.Where(o => o.BranchId == tenantContext.BranchId.Value);
+                query = query.Where(o => o.BranchId == effectiveBranchId.Value);
             }
 
             var results = await query
@@ -465,10 +480,12 @@ public sealed class DashboardService(
         }
     }
 
-    public async Task<IReadOnlyCollection<LowStockItemDto>> GetLowStockItemsAsync(CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<LowStockItemDto>> GetLowStockItemsAsync(Guid? branchId, CancellationToken cancellationToken)
     {
         try
         {
+            // Note: InventoryItem is tenant-scoped, not branch-scoped.
+            // Inventory is managed at the tenant level, so branchId parameter is not used here.
             var items = await dbContext.InventoryItems
                 .AsNoTracking()
                 .Where(i => i.TenantId == tenantContext.TenantId && 
@@ -484,22 +501,24 @@ public sealed class DashboardService(
                 .OrderBy(i => i.QuantityNeeded)
                 .ToListAsync(cancellationToken);
 
-            logger.Information("Retrieved {Count} low stock items for tenant {TenantId}", 
-                items.Count, tenantContext.TenantId);
+        logger.Information("Retrieved {Count} low stock items for tenant {TenantId}", 
+            items.Count, tenantContext.TenantId);
 
             return items;
         }
-        catch (Exception ex)
-        {
-            logger.Error(ex, "Error retrieving low stock items for tenant {TenantId}", tenantContext.TenantId);
-            throw;
-        }
+    catch (Exception ex)
+    {
+        logger.Error(ex, "Error retrieving low stock items for tenant {TenantId}", 
+            tenantContext.TenantId);
+        throw;
+    }
     }
 
-    public async Task<IReadOnlyCollection<RevenueByDayDto>> GetRevenueByDayAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<RevenueByDayDto>> GetRevenueByDayAsync(DateTimeOffset from, DateTimeOffset to, Guid? branchId, CancellationToken cancellationToken)
     {
         try
         {
+            var effectiveBranchId = GetEffectiveBranchId(branchId);
             // Convert to UTC to avoid PostgreSQL offset issues
             var fromUtc = from.ToUniversalTime();
             var toUtc = to.ToUniversalTime();
@@ -509,9 +528,9 @@ public sealed class DashboardService(
                            o.CreatedAt >= fromUtc && 
                            o.CreatedAt <= toUtc);
 
-            if (tenantContext.BranchId.HasValue)
+            if (effectiveBranchId.HasValue)
             {
-                query = query.Where(o => o.BranchId == tenantContext.BranchId.Value);
+                query = query.Where(o => o.BranchId == effectiveBranchId.Value);
             }
 
             var orders = await query
@@ -542,10 +561,11 @@ public sealed class DashboardService(
         }
     }
 
-    public async Task<IReadOnlyCollection<AverageOrderValueDto>> GetAverageOrderValueTrendAsync(DateTimeOffset from, DateTimeOffset to, CancellationToken cancellationToken)
+    public async Task<IReadOnlyCollection<AverageOrderValueDto>> GetAverageOrderValueTrendAsync(DateTimeOffset from, DateTimeOffset to, Guid? branchId, CancellationToken cancellationToken)
     {
         try
         {
+            var effectiveBranchId = GetEffectiveBranchId(branchId);
             // Convert to UTC to avoid PostgreSQL offset issues
             var fromUtc = from.ToUniversalTime();
             var toUtc = to.ToUniversalTime();
@@ -555,9 +575,9 @@ public sealed class DashboardService(
                            o.CreatedAt >= fromUtc && 
                            o.CreatedAt <= toUtc);
 
-            if (tenantContext.BranchId.HasValue)
+            if (effectiveBranchId.HasValue)
             {
-                query = query.Where(o => o.BranchId == tenantContext.BranchId.Value);
+                query = query.Where(o => o.BranchId == effectiveBranchId.Value);
             }
 
             var orders = await query

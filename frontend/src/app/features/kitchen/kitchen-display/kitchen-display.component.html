@@ -99,7 +99,7 @@
                 <button
                   type="button"
                   class="w-full px-6 py-4 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
-                  (click)="updateOrderStatus(order.id, OrderStatus.InPreparation)">
+                  (click)="updateOrderStatus(order.id, OrderStatus.InPreparation, order)">
                   <lucide-icon [name]="playIcon" size="20"></lucide-icon>
                   <span>Start Preparation</span>
                 </button>
@@ -118,5 +118,45 @@
         }
       </div>
     }
+  }
+
+  <!-- Payment Warning Modal -->
+  @if (showPaymentWarningModal()) {
+    <div
+      class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
+      (click)="closePaymentWarningModal()"
+      role="dialog"
+      aria-modal="true">
+      <div
+        class="w-full max-w-md bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-hidden flex flex-col z-50"
+        (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark bg-yellow-50 dark:bg-yellow-900/20">
+          <div class="flex items-center gap-3">
+            <div class="p-2 rounded-full bg-yellow-100 dark:bg-yellow-800">
+              <lucide-icon [name]="creditCardIcon" size="24" class="text-yellow-600 dark:text-yellow-400"></lucide-icon>
+            </div>
+            <h2 class="text-xl font-bold text-yellow-800 dark:text-yellow-300">Payment Required</h2>
+          </div>
+        </div>
+        <div class="p-6">
+          @if (paymentWarningOrder()) {
+            <p class="text-text-primary-light dark:text-text-primary-dark mb-4">
+              Order <strong>{{ paymentWarningOrder()!.orderNumber }}</strong> cannot start preparation yet.
+            </p>
+          }
+          <p class="text-text-secondary-light dark:text-text-secondary-dark">
+            {{ paymentWarningMessage() }}
+          </p>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-border-light dark:border-border-dark">
+          <button
+            type="button"
+            class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95"
+            (click)="closePaymentWarningModal()">
+            Understood
+          </button>
+        </div>
+      </div>
+    </div>
   }
 </div>

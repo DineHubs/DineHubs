@@ -1,4 +1,4 @@
-<header class="sticky top-0 z-50 bg-surface-light/80 dark:bg-surface-dark/80 backdrop-blur-xl border-b border-border-light dark:border-border-dark shadow-sm">
+<header class="sticky top-0 z-30 bg-surface-light dark:bg-surface-dark border-b border-border-light dark:border-border-dark shadow-sm">
   <div class="flex items-center justify-between px-4 md:px-6 h-16">
     <!-- Left: Menu Toggle & Title -->
     <div class="flex items-center gap-4">
@@ -14,8 +14,19 @@
       </h1>
     </div>
 
-    <!-- Right: User Menu -->
-    <div class="relative">
+    <!-- Right: Theme Toggle & User Menu -->
+    <div class="flex items-center gap-2">
+      <!-- Dark Mode Toggle -->
+      <button
+        type="button"
+        class="p-2 rounded-xl hover:bg-border-light dark:hover:bg-border-dark transition-colors active:scale-95"
+        (click)="toggleTheme()"
+        [attr.aria-label]="isDarkMode ? 'Switch to light mode' : 'Switch to dark mode'">
+        <lucide-icon [name]="themeIcon" size="20" class="text-text-primary-light dark:text-text-primary-dark"></lucide-icon>
+      </button>
+
+      <!-- User Menu -->
+      <div class="relative">
       <button
         type="button"
         class="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95"
@@ -38,7 +49,7 @@
       <!-- Dropdown Menu -->
       @if (showUserMenu()) {
         <div
-          class="absolute right-0 mt-2 w-64 bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl border border-border-light dark:border-border-dark overflow-hidden z-50 animate-in fade-in zoom-in-95"
+          class="absolute right-0 mt-2 w-64 bg-surface-light dark:bg-surface-dark rounded-xl shadow-2xl border border-border-light dark:border-border-dark overflow-hidden z-[35] animate-in fade-in zoom-in-95"
           (click)="$event.stopPropagation()">
           <div class="p-4 border-b border-border-light dark:border-border-dark">
             <p class="text-sm font-semibold text-text-primary-light dark:text-text-primary-dark mb-1">
@@ -60,13 +71,14 @@
           </div>
         </div>
       }
+      </div>
     </div>
   </div>
 
   <!-- Backdrop to close menu -->
   @if (showUserMenu()) {
     <div
-      class="fixed inset-0 z-40"
+      class="fixed inset-0 z-[34]"
       (click)="closeUserMenu()">
     </div>
   }

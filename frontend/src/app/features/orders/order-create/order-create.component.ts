@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -13,7 +13,7 @@ import { ProductGridComponent } from './components/product-grid/product-grid.com
 import { CategoryNavComponent } from './components/category-nav/category-nav.component';
 import { OrderSidebarComponent } from './components/order-sidebar/order-sidebar.component';
 import { CheckoutModalComponent, PaymentProvider } from './components/checkout-modal/checkout-modal.component';
-import { LucideAngularModule, Search, Moon, Sun } from 'lucide-angular';
+import { LucideAngularModule, Search, Moon, Sun, ShoppingCart, X } from 'lucide-angular';
 
 export interface CartItem {
   menuItem: MenuItem;
@@ -91,10 +91,25 @@ export class OrderCreateComponent implements OnInit {
   // Checkout modal state
   isCheckoutOpen = signal<boolean>(false);
 
-  // Theme icons
+  // Mobile cart drawer state
+  isCartDrawerOpen = signal<boolean>(false);
+  isMobileView = signal<boolean>(false);
+
+  // Icons
   searchIcon = Search;
   moonIcon = Moon;
   sunIcon = Sun;
+  cartIcon = ShoppingCart;
+  closeIcon = X;
+
+  @HostListener('window:resize')
+  onResize(): void {
+    this.checkMobileView();
+  }
+
+  private checkMobileView(): void {
+    this.isMobileView.set(window.innerWidth < 1024);
+  }
 
   get themeIcon() {
     return this.themeService.theme() === 'dark' ? this.sunIcon : this.moonIcon;
@@ -105,7 +120,16 @@ export class OrderCreateComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.checkMobileView();
     this.loadMenuItems();
+  }
+
+  toggleCartDrawer(): void {
+    this.isCartDrawerOpen.update(v => !v);
+  }
+
+  closeCartDrawer(): void {
+    this.isCartDrawerOpen.set(false);
   }
 
   loadMenuItems(): void {
@@ -322,6 +346,23 @@ export class OrderCreateComponent implements OnInit {
 
   onCartItemRemoved(item: CartItem): void {
     this.removeFromCart(item);
+  }
+
+  onGridQuantityChange(event: { menuItemId: string; quantity: number }): void {
+    const currentCart = this.cart();
+    if (event.quantity <= 0) {
+      // Remove item from cart
+      this.cart.set(currentCart.filter(item => item.menuItem.id !== event.menuItemId));
+    } else {
+      // Update quantity
+      this.cart.set(
+        currentCart.map(item =>
+          item.menuItem.id === event.menuItemId
+            ? { ...item, quantity: event.quantity }
+            : item
+        )
+      );
+    }
   }
 
   onTableNumberChange(value: string): void {

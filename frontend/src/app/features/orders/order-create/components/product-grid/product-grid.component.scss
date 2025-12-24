@@ -1,2 +1,10 @@
-// Minimal custom styles - most styling via Tailwind
+// Allow badges to overflow card boundaries
+:host {
+  display: block;
+  overflow: visible;
+}
+
+.grid {
+  overflow: visible;
+}
 

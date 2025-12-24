@@ -1,40 +1,38 @@
-<div class="flex items-center gap-3 py-2 border-b border-border-light dark:border-border-dark last:border-b-0">
+<div class="flex items-center gap-2 py-1.5 border-b border-border-light/50 dark:border-border-dark/50 last:border-b-0">
   <!-- Item Info -->
   <div class="flex-1 min-w-0">
-    <h4 class="font-semibold text-text-primary-light dark:text-text-primary-dark text-sm mb-0.5 truncate">
+    <h4 class="font-medium text-text-primary-light dark:text-text-primary-dark text-[11px] leading-tight truncate">
       {{ cartItem.menuItem.name }}
     </h4>
-    <p class="text-text-secondary-light dark:text-text-secondary-dark text-xs">
-      RM{{ cartItem.menuItem.price | number:'1.2-2' }} each
+    <p class="text-text-secondary-light dark:text-text-secondary-dark text-[10px]">
+      RM{{ cartItem.menuItem.price | number:'1.2-2' }}
     </p>
   </div>
 
-  <!-- Quantity Controls -->
-  <div class="flex items-center gap-1.5">
+  <!-- Quantity Controls - Compact Inline -->
+  <div class="flex items-center bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-md overflow-hidden">
     <button
       type="button"
-      class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95"
+      class="w-6 h-6 flex items-center justify-center hover:bg-border-light dark:hover:bg-border-dark transition-colors active:scale-95"
       (click)="onQuantityChange(-1)"
-      [attr.aria-label]="'Decrease quantity of ' + cartItem.menuItem.name">
-      <lucide-icon [name]="minusIcon" size="16"></lucide-icon>
+      [attr.aria-label]="'Decrease quantity'">
+      <lucide-icon [name]="minusIcon" size="12"></lucide-icon>
     </button>
-    
-    <span class="min-w-[24px] text-center font-semibold text-text-primary-light dark:text-text-primary-dark text-sm">
+    <span class="w-5 text-center font-bold text-text-primary-light dark:text-text-primary-dark text-[11px]">
       {{ cartItem.quantity }}
     </span>
-    
     <button
       type="button"
-      class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg bg-primary hover:bg-primary/90 text-white transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg"
+      class="w-6 h-6 flex items-center justify-center bg-primary text-white hover:bg-primary/90 transition-colors active:scale-95"
       (click)="onQuantityChange(1)"
-      [attr.aria-label]="'Increase quantity of ' + cartItem.menuItem.name">
-      <lucide-icon [name]="plusIcon" size="16"></lucide-icon>
+      [attr.aria-label]="'Increase quantity'">
+      <lucide-icon [name]="plusIcon" size="12"></lucide-icon>
     </button>
   </div>
 
   <!-- Item Total -->
-  <div class="text-right min-w-[70px]">
-    <p class="font-bold text-base text-primary dark:text-primary">
+  <div class="text-right min-w-[50px]">
+    <p class="font-bold text-xs text-primary">
       RM{{ (cartItem.menuItem.price * cartItem.quantity) | number:'1.2-2' }}
     </p>
   </div>
@@ -42,10 +40,10 @@
   <!-- Remove Button -->
   <button
     type="button"
-    class="min-w-[32px] min-h-[32px] flex items-center justify-center rounded-lg text-error hover:bg-error/10 transition-all duration-200 active:scale-95"
+    class="w-5 h-5 flex items-center justify-center rounded text-error/70 hover:text-error hover:bg-error/10 transition-colors active:scale-95"
     (click)="onRemove()"
-    [attr.aria-label]="'Remove ' + cartItem.menuItem.name + ' from cart'">
-    <lucide-icon [name]="trashIcon" size="16"></lucide-icon>
+    [attr.aria-label]="'Remove'">
+    <lucide-icon [name]="trashIcon" size="12"></lucide-icon>
   </button>
 </div>
 
