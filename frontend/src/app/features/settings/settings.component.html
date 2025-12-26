@@ -32,6 +32,16 @@
         (click)="setTab('users')">
         Users
       </button>
+      <button
+        type="button"
+        [ngClass]="{
+          'bg-primary text-white': activeTab() === 'printers',
+          'text-text-secondary-light dark:text-text-secondary-dark hover:text-text-primary-light dark:hover:text-text-primary-dark hover:bg-bg-light dark:hover:bg-bg-dark': activeTab() !== 'printers'
+        }"
+        class="flex-1 px-6 py-4 text-sm md:text-base font-semibold transition-all duration-200 active:scale-95"
+        (click)="setTab('printers')">
+        Printers
+      </button>
     </div>
 
     <!-- Tab Content -->
@@ -41,6 +51,9 @@
       }
       @if (activeTab() === 'users') {
         <app-user-management></app-user-management>
+      }
+      @if (activeTab() === 'printers') {
+        <app-printer-management></app-printer-management>
       }
     </div>
   </div>

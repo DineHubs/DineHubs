@@ -247,6 +247,11 @@ public static class NavigationMenuSeeder
         await dbContext.SaveChangesAsync(cancellationToken);
         await AddPermissionsAsync(dbContext, settingsSystem.Id, new[] { SystemRoles.SuperAdmin }, cancellationToken);
 
+        var settingsPrinters = new NavigationMenuItem(tenantId, "Printers", "print", "/settings/printers", settings.Id, 5);
+        dbContext.NavigationMenuItems.Add(settingsPrinters);
+        await dbContext.SaveChangesAsync(cancellationToken);
+        await AddPermissionsAsync(dbContext, settingsPrinters.Id, new[] { SystemRoles.Admin, SystemRoles.Manager }, cancellationToken);
+
         Log.Information("Seeded navigation menu for tenant {TenantId}", tenantId);
     }
 

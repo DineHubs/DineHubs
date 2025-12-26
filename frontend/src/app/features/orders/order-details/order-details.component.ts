@@ -220,12 +220,14 @@ export class OrderDetailsComponent implements OnInit {
   }
 
   viewReceipt(): void {
-    const url = this.receiptUrl();
-    if (!url) {
-      this.toastService.error('Receipt not available');
+    const order = this.order();
+    if (!order) {
+      this.toastService.error('Order not available');
       return;
     }
-    window.open(url, '_blank');
+    // Use the print service to display the receipt
+    // This opens the browser's print dialog with the thermal receipt
+    this.printService.printOrder(order);
   }
 
   openReprintModal(): void {

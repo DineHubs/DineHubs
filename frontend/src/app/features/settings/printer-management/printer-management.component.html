@@ -1,0 +1,587 @@
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+    <div>
+      <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark mb-1">
+        Printers
+      </h2>
+      <p class="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark leading-relaxed">
+        Configure printers for each branch
+      </p>
+    </div>
+    <button
+      type="button"
+      class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-md hover:shadow-lg"
+      (click)="openAddModal()"
+      [disabled]="branches().length === 0">
+      <lucide-icon [name]="plusIcon" size="20"></lucide-icon>
+      <span>Add Printer</span>
+    </button>
+  </div>
+
+  <!-- Filters -->
+  <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark p-4 md:p-6">
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <!-- Search -->
+      <div class="relative">
+        <lucide-icon [name]="searchIcon" size="20" class="absolute left-3 top-1/2 -translate-y-1/2 text-text-secondary-light dark:text-text-secondary-dark"></lucide-icon>
+        <input
+          type="text"
+          [value]="searchTerm()"
+          (input)="onSearchChange($any($event.target).value)"
+          placeholder="Search printers..."
+          class="w-full pl-10 pr-4 py-2.5 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200">
+      </div>
+
+      <!-- Branch Filter -->
+      <select
+        [value]="filterBranchId()"
+        (change)="onBranchFilterChange($any($event.target).value)"
+        class="w-full px-4 py-2.5 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 appearance-none cursor-pointer">
+        <option value="">All Branches</option>
+        @for (branch of branches(); track branch.id) {
+          <option [value]="branch.id">{{ branch.name }}</option>
+        }
+      </select>
+
+      <!-- Type Filter -->
+      <select
+        [value]="filterType()"
+        (change)="onTypeFilterChange($any($event.target).value)"
+        class="w-full px-4 py-2.5 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 appearance-none cursor-pointer">
+        <option value="">All Types</option>
+        @for (type of printerTypes; track type.value) {
+          <option [value]="type.value">{{ type.label }}</option>
+        }
+      </select>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-24">
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+    </div>
+  }
+
+  @else {
+    @if (filteredPrinters().length === 0) {
+      <!-- Empty State -->
+      <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-12 text-center">
+        <div class="p-4 rounded-full bg-primary/10 dark:bg-primary/20 inline-flex mb-4">
+          <lucide-icon [name]="printerIcon" size="48" class="text-primary"></lucide-icon>
+        </div>
+        <h3 class="text-lg md:text-xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark mb-2">
+          @if (searchTerm() || filterBranchId() || filterType()) {
+            No printers found
+          } @else {
+            No printers configured
+          }
+        </h3>
+        <p class="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark mb-6 leading-relaxed">
+          @if (searchTerm() || filterBranchId() || filterType()) {
+            Try adjusting your filters
+          } @else if (branches().length === 0) {
+            Create a branch first before adding printers
+          } @else {
+            Get started by adding your first printer
+          }
+        </p>
+        @if (!searchTerm() && !filterBranchId() && !filterType() && branches().length > 0) {
+          <button
+            type="button"
+            class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 flex items-center gap-2 shadow-md hover:shadow-lg mx-auto"
+            (click)="openAddModal()">
+            <lucide-icon [name]="plusIcon" size="20"></lucide-icon>
+            <span>Add Printer</span>
+          </button>
+        }
+      </div>
+    }
+
+    @else {
+      <!-- Desktop Table -->
+      <div class="hidden md:block bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark overflow-hidden">
+        <div class="overflow-x-auto">
+          <table class="w-full">
+            <thead>
+              <tr class="border-b border-border-light dark:border-border-dark bg-bg-light dark:bg-bg-dark">
+                <th class="px-4 md:px-6 py-3 text-left text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                  Printer
+                </th>
+                <th class="px-4 md:px-6 py-3 text-left text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                  Branch
+                </th>
+                <th class="px-4 md:px-6 py-3 text-left text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                  Type
+                </th>
+                <th class="px-4 md:px-6 py-3 text-left text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                  Connection
+                </th>
+                <th class="px-4 md:px-6 py-3 text-left text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                  Status
+                </th>
+                <th class="px-4 md:px-6 py-3 text-right text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-border-light dark:divide-border-dark">
+              @for (printer of paginatedPrinters(); track printer.id) {
+                <tr class="hover:bg-bg-light dark:hover:bg-bg-dark transition-colors duration-200">
+                  <td class="px-4 md:px-6 py-4">
+                    <div class="flex items-center gap-3">
+                      <div class="p-2 rounded-lg bg-primary/10 dark:bg-primary/20">
+                        <lucide-icon [name]="printerIcon" size="20" class="text-primary"></lucide-icon>
+                      </div>
+                      <div>
+                        <div class="flex items-center gap-2">
+                          <span class="text-sm md:text-base font-medium text-text-primary-light dark:text-text-primary-dark">
+                            {{ printer.name }}
+                          </span>
+                          @if (printer.isDefault) {
+                            <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
+                              Default
+                            </span>
+                          }
+                        </div>
+                        <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                          {{ printer.printerName }}
+                        </span>
+                      </div>
+                    </div>
+                  </td>
+                  <td class="px-4 md:px-6 py-4">
+                    <span class="text-sm text-text-primary-light dark:text-text-primary-dark">
+                      {{ printer.branchName }}
+                    </span>
+                  </td>
+                  <td class="px-4 md:px-6 py-4">
+                    <span class="px-2.5 py-1 text-xs font-medium rounded-full" [ngClass]="getTypeColor(printer.type)">
+                      {{ PrinterTypeLabels[printer.type] }}
+                    </span>
+                  </td>
+                  <td class="px-4 md:px-6 py-4">
+                    <div class="flex items-center gap-2">
+                      <lucide-icon [name]="getConnectionIcon(printer.connectionType)" size="16" class="text-text-secondary-light dark:text-text-secondary-dark"></lucide-icon>
+                      <span class="text-sm text-text-primary-light dark:text-text-primary-dark">
+                        {{ ConnectionTypeLabels[printer.connectionType] }}
+                      </span>
+                      <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                        ({{ printer.paperWidth }}mm)
+                      </span>
+                    </div>
+                  </td>
+                  <td class="px-4 md:px-6 py-4">
+                    @if (printer.isActive) {
+                      <span class="px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                        Active
+                      </span>
+                    } @else {
+                      <span class="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300">
+                        Inactive
+                      </span>
+                    }
+                  </td>
+                  <td class="px-4 md:px-6 py-4">
+                    <div class="flex items-center justify-end gap-2">
+                      <button
+                        type="button"
+                        class="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all duration-200 active:scale-95 disabled:opacity-50"
+                        (click)="testPrinter(printer)"
+                        [disabled]="isTesting() === printer.id"
+                        [attr.aria-label]="'Test ' + printer.name">
+                        @if (isTesting() === printer.id) {
+                          <div class="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                        } @else {
+                          <lucide-icon [name]="testIcon" size="18"></lucide-icon>
+                        }
+                      </button>
+                      <button
+                        type="button"
+                        class="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95"
+                        (click)="openEditModal(printer)"
+                        [attr.aria-label]="'Edit ' + printer.name">
+                        <lucide-icon [name]="editIcon" size="18"></lucide-icon>
+                      </button>
+                      <button
+                        type="button"
+                        class="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-xl bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 transition-all duration-200 active:scale-95"
+                        (click)="openDeleteModal(printer)"
+                        [attr.aria-label]="'Delete ' + printer.name">
+                        <lucide-icon [name]="trashIcon" size="18"></lucide-icon>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (totalPages() > 1 || filteredPrinters().length > 0) {
+          <div class="border-t border-border-light dark:border-border-dark px-4 md:px-6 py-4">
+            <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div class="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                Showing <span class="font-medium text-text-primary-light dark:text-text-primary-dark">{{ paginationInfo().start }}</span>
+                to <span class="font-medium text-text-primary-light dark:text-text-primary-dark">{{ paginationInfo().end }}</span>
+                of <span class="font-medium text-text-primary-light dark:text-text-primary-dark">{{ paginationInfo().total }}</span> printers
+              </div>
+
+              <div class="flex items-center gap-2">
+                <label class="text-sm text-text-secondary-light dark:text-text-secondary-dark">Show:</label>
+                <select
+                  [value]="pageSize()"
+                  (change)="onPageSizeChange(+$any($event.target).value)"
+                  class="px-3 py-1.5 rounded-lg bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark text-sm focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 appearance-none cursor-pointer">
+                  @for (size of pageSizeOptions; track size) {
+                    <option [value]="size">{{ size }}</option>
+                  }
+                </select>
+              </div>
+
+              @if (totalPages() > 1) {
+                <div class="flex items-center gap-2">
+                  <button
+                    type="button"
+                    class="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    (click)="previousPage()"
+                    [disabled]="currentPage() === 1">
+                    <lucide-icon [name]="chevronLeftIcon" size="18"></lucide-icon>
+                  </button>
+
+                  <div class="flex items-center gap-1">
+                    @for (page of getPageNumbers(); track page) {
+                      @if (page === -1) {
+                        <span class="px-2 text-text-secondary-light dark:text-text-secondary-dark">...</span>
+                      } @else {
+                        <button
+                          type="button"
+                          [ngClass]="{
+                            'bg-primary text-white': page === currentPage(),
+                            'bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark hover:bg-border-light dark:hover:bg-border-dark': page !== currentPage()
+                          }"
+                          class="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg text-sm font-medium transition-all duration-200 active:scale-95"
+                          (click)="goToPage(page)">
+                          {{ page }}
+                        </button>
+                      }
+                    }
+                  </div>
+
+                  <button
+                    type="button"
+                    class="min-w-[36px] min-h-[36px] flex items-center justify-center rounded-lg bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                    (click)="nextPage()"
+                    [disabled]="currentPage() === totalPages()">
+                    <lucide-icon [name]="chevronRightIcon" size="18"></lucide-icon>
+                  </button>
+                </div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Mobile Cards -->
+      <div class="md:hidden space-y-4">
+        @for (printer of paginatedPrinters(); track printer.id) {
+          <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark p-4 space-y-3">
+            <div class="flex items-start justify-between">
+              <div class="flex items-center gap-3">
+                <div class="p-2 rounded-lg bg-primary/10 dark:bg-primary/20">
+                  <lucide-icon [name]="printerIcon" size="20" class="text-primary"></lucide-icon>
+                </div>
+                <div>
+                  <div class="flex items-center gap-2">
+                    <h3 class="text-base font-semibold text-text-primary-light dark:text-text-primary-dark">
+                      {{ printer.name }}
+                    </h3>
+                    @if (printer.isDefault) {
+                      <span class="px-2 py-0.5 text-xs font-medium rounded-full bg-primary/10 text-primary">
+                        Default
+                      </span>
+                    }
+                  </div>
+                  <span class="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                    {{ printer.printerName }}
+                  </span>
+                </div>
+              </div>
+              @if (printer.isActive) {
+                <span class="px-2.5 py-1 text-xs font-medium rounded-full bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300">
+                  Active
+                </span>
+              } @else {
+                <span class="px-2.5 py-1 text-xs font-medium rounded-full bg-gray-100 dark:bg-gray-900/30 text-gray-700 dark:text-gray-300">
+                  Inactive
+                </span>
+              }
+            </div>
+
+            <div class="grid grid-cols-2 gap-2 text-sm">
+              <div>
+                <span class="text-text-secondary-light dark:text-text-secondary-dark">Branch:</span>
+                <span class="ml-1 text-text-primary-light dark:text-text-primary-dark">{{ printer.branchName }}</span>
+              </div>
+              <div>
+                <span class="text-text-secondary-light dark:text-text-secondary-dark">Type:</span>
+                <span class="ml-1 px-2 py-0.5 text-xs font-medium rounded-full" [ngClass]="getTypeColor(printer.type)">
+                  {{ PrinterTypeLabels[printer.type] }}
+                </span>
+              </div>
+              <div class="col-span-2">
+                <span class="text-text-secondary-light dark:text-text-secondary-dark">Connection:</span>
+                <span class="ml-1 text-text-primary-light dark:text-text-primary-dark">
+                  {{ ConnectionTypeLabels[printer.connectionType] }} ({{ printer.paperWidth }}mm)
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-end gap-2 pt-3 border-t border-border-light dark:border-border-dark">
+              <button
+                type="button"
+                class="px-3 py-2 rounded-xl bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 hover:bg-blue-200 dark:hover:bg-blue-900/50 transition-all duration-200 active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                (click)="testPrinter(printer)"
+                [disabled]="isTesting() === printer.id">
+                @if (isTesting() === printer.id) {
+                  <div class="animate-spin rounded-full h-4 w-4 border-2 border-blue-600 border-t-transparent"></div>
+                } @else {
+                  <lucide-icon [name]="testIcon" size="16"></lucide-icon>
+                }
+                <span>Test</span>
+              </button>
+              <button
+                type="button"
+                class="px-3 py-2 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95 flex items-center gap-2"
+                (click)="openEditModal(printer)">
+                <lucide-icon [name]="editIcon" size="16"></lucide-icon>
+                <span>Edit</span>
+              </button>
+              <button
+                type="button"
+                class="px-3 py-2 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300 hover:bg-red-200 dark:hover:bg-red-900/50 transition-all duration-200 active:scale-95 flex items-center gap-2"
+                (click)="openDeleteModal(printer)">
+                <lucide-icon [name]="trashIcon" size="16"></lucide-icon>
+                <span>Delete</span>
+              </button>
+            </div>
+          </div>
+        }
+      </div>
+    }
+  }
+
+  <!-- Add/Edit Modal -->
+  @if (showAddModal() || showEditModal()) {
+    <div
+      class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
+      (click)="showAddModal() ? closeAddModal() : closeEditModal()"
+      role="dialog"
+      aria-modal="true">
+      <div
+        class="w-full max-w-lg bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-hidden flex flex-col z-50"
+        (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
+          <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">
+            {{ showAddModal() ? 'Add Printer' : 'Edit Printer' }}
+          </h2>
+          <button
+            type="button"
+            class="p-2 rounded-xl hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95"
+            (click)="showAddModal() ? closeAddModal() : closeEditModal()">
+            <lucide-icon [name]="xIcon" size="24" class="text-text-secondary-light dark:text-text-secondary-dark"></lucide-icon>
+          </button>
+        </div>
+        <div class="p-6 space-y-4 overflow-y-auto">
+          <!-- Branch -->
+          @if (showAddModal()) {
+            <div>
+              <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+                Branch
+              </label>
+              <select
+                [value]="printerForm().branchId"
+                (change)="updateFormField('branchId', $any($event.target).value)"
+                class="w-full px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 appearance-none cursor-pointer">
+                @for (branch of branches(); track branch.id) {
+                  <option [value]="branch.id">{{ branch.name }}</option>
+                }
+              </select>
+            </div>
+          }
+
+          <!-- Name -->
+          <div>
+            <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+              Display Name
+            </label>
+            <input
+              type="text"
+              [value]="printerForm().name"
+              (input)="updateFormField('name', $any($event.target).value)"
+              placeholder="e.g., Kitchen Printer 1"
+              class="w-full px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200">
+          </div>
+
+          <!-- Printer Type -->
+          <div>
+            <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+              Printer Type
+            </label>
+            <select
+              [value]="printerForm().type"
+              (change)="updateFormField('type', +$any($event.target).value)"
+              class="w-full px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 appearance-none cursor-pointer">
+              @for (type of printerTypes; track type.value) {
+                <option [value]="type.value">{{ type.label }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Connection Type -->
+          <div>
+            <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+              Connection Type
+            </label>
+            <select
+              [value]="printerForm().connectionType"
+              (change)="updateFormField('connectionType', +$any($event.target).value)"
+              class="w-full px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 appearance-none cursor-pointer">
+              @for (conn of connectionTypes; track conn.value) {
+                <option [value]="conn.value">{{ conn.label }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Printer Name/Address -->
+          <div>
+            <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+              @if (printerForm().connectionType === ConnectionType.Network) {
+                Printer IP Address
+              } @else {
+                Printer Name (Windows)
+              }
+            </label>
+            <input
+              type="text"
+              [value]="printerForm().printerName"
+              (input)="updateFormField('printerName', $any($event.target).value)"
+              [placeholder]="printerForm().connectionType === ConnectionType.Network ? '192.168.1.100:9100' : 'EPSON TM-T88VI'"
+              class="w-full px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark placeholder:text-text-secondary-light dark:placeholder:text-text-secondary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200">
+            <p class="mt-1 text-xs text-text-secondary-light dark:text-text-secondary-dark">
+              @if (printerForm().connectionType === ConnectionType.Network) {
+                Enter the printer's IP address and port (e.g., 192.168.1.100:9100)
+              } @else {
+                Enter the exact printer name as shown in Windows Devices and Printers
+              }
+            </p>
+          </div>
+
+          <!-- Paper Width -->
+          <div>
+            <label class="block text-sm font-medium text-text-primary-light dark:text-text-primary-dark mb-2">
+              Paper Width
+            </label>
+            <select
+              [value]="printerForm().paperWidth"
+              (change)="updateFormField('paperWidth', +$any($event.target).value)"
+              class="w-full px-4 py-3 rounded-xl bg-bg-light dark:bg-bg-dark border border-border-light dark:border-border-dark text-text-primary-light dark:text-text-primary-dark focus:outline-none focus:ring-2 focus:ring-primary transition-all duration-200 appearance-none cursor-pointer">
+              @for (width of PaperWidthOptions; track width.value) {
+                <option [value]="width.value">{{ width.label }}</option>
+              }
+            </select>
+          </div>
+
+          <!-- Options -->
+          <div class="space-y-3">
+            <label class="flex items-center gap-3 cursor-pointer">
+              <input
+                type="checkbox"
+                [checked]="printerForm().isDefault"
+                (change)="updateFormField('isDefault', $any($event.target).checked)"
+                class="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary">
+              <span class="text-sm text-text-primary-light dark:text-text-primary-dark">
+                Set as default printer for this type
+              </span>
+            </label>
+
+            @if (showEditModal()) {
+              <label class="flex items-center gap-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  [checked]="printerForm().isActive"
+                  (change)="updateFormField('isActive', $any($event.target).checked)"
+                  class="w-5 h-5 rounded border-border-light dark:border-border-dark text-primary focus:ring-primary">
+                <span class="text-sm text-text-primary-light dark:text-text-primary-dark">
+                  Printer is active
+                </span>
+              </label>
+            }
+          </div>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-border-light dark:border-border-dark">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95"
+            (click)="showAddModal() ? closeAddModal() : closeEditModal()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            (click)="showAddModal() ? createPrinter() : updatePrinter()"
+            [disabled]="!printerForm().name.trim() || !printerForm().printerName.trim()">
+            {{ showAddModal() ? 'Create' : 'Update' }}
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Delete Confirmation Modal -->
+  @if (showDeleteModal() && selectedPrinter()) {
+    <div
+      class="fixed inset-0 z-40 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in"
+      (click)="closeDeleteModal()"
+      role="dialog"
+      aria-modal="true">
+      <div
+        class="w-full max-w-md bg-surface-light dark:bg-surface-dark rounded-2xl shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] overflow-hidden flex flex-col z-50"
+        (click)="$event.stopPropagation()">
+        <div class="flex items-center justify-between p-6 border-b border-border-light dark:border-border-dark">
+          <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark">
+            Delete Printer
+          </h2>
+          <button
+            type="button"
+            class="p-2 rounded-xl hover:bg-border-light dark:hover:bg-border-dark transition-all duration-200 active:scale-95"
+            (click)="closeDeleteModal()">
+            <lucide-icon [name]="xIcon" size="24" class="text-text-secondary-light dark:text-text-secondary-dark"></lucide-icon>
+          </button>
+        </div>
+        <div class="p-6 space-y-4">
+          <p class="text-base text-text-primary-light dark:text-text-primary-dark leading-relaxed">
+            Are you sure you want to delete <strong>"{{ selectedPrinter()!.name }}"</strong>? This action cannot be undone.
+          </p>
+        </div>
+        <div class="flex items-center justify-end gap-3 p-6 border-t border-border-light dark:border-border-dark">
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95"
+            (click)="closeDeleteModal()">
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="px-4 py-2 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold transition-all duration-200 active:scale-95 shadow-md hover:shadow-lg"
+            (click)="confirmDelete()">
+            Delete Printer
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+</div>
+

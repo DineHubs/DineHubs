@@ -39,6 +39,8 @@ public class OrderManagementDbContext(
     public DbSet<ReceiptPrint> ReceiptPrints => Set<ReceiptPrint>();
     public DbSet<OrderMetrics> OrderMetrics => Set<OrderMetrics>();
     public DbSet<OrderException> OrderExceptions => Set<OrderException>();
+    public DbSet<PrinterConfiguration> PrinterConfigurations => Set<PrinterConfiguration>();
+    public DbSet<Table> Tables => Set<Table>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

@@ -1,6 +1,6 @@
 import { Component, OnInit, inject, signal, computed, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router } from '@angular/router';
+import { Router, ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiService } from '../../../core/services/api.service';
 import { AuthService } from '../../../core/services/auth.service';
@@ -39,9 +39,13 @@ export class OrderCreateComponent implements OnInit {
   private apiService = inject(ApiService);
   private authService = inject(AuthService);
   private router = inject(Router);
+  private route = inject(ActivatedRoute);
   private themeService = inject(ThemeService);
   private toastService = inject(ToastService);
   private printService = inject(PrintService);
+
+  // Table info from floor plan navigation
+  tableId = signal<string | null>(null);
 
   // Signals for state management
   menuItems = signal<MenuItem[]>([]);
@@ -122,6 +126,16 @@ export class OrderCreateComponent implements OnInit {
   ngOnInit(): void {
     this.checkMobileView();
     this.loadMenuItems();
+    
+    // Check for table info from floor plan navigation
+    this.route.queryParams.subscribe(params => {
+      if (params['tableId']) {
+        this.tableId.set(params['tableId']);
+      }
+      if (params['tableNumber']) {
+        this.tableNumber.set(params['tableNumber']);
+      }
+    });
   }
 
   toggleCartDrawer(): void {

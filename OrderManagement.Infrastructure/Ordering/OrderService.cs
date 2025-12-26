@@ -32,6 +32,35 @@ public sealed class OrderService(
                 ? (dto.TableNumber ?? string.Empty)
                 : dto.TableNumber!;
 
+            // Check if table is already occupied (has active order) for dine-in orders
+            if (!dto.IsTakeAway)
+            {
+                var activeStatuses = new[] 
+                { 
+                    OrderStatus.Draft, 
+                    OrderStatus.Submitted, 
+                    OrderStatus.InPreparation, 
+                    OrderStatus.Ready, 
+                    OrderStatus.Delivered 
+                };
+                
+                var existingOrder = await dbContext.Orders
+                    .AsNoTracking()
+                    .Where(o => o.TenantId == tenantId 
+                        && o.BranchId == branchId 
+                        && o.TableNumber == tableNumber 
+                        && activeStatuses.Contains(o.Status))
+                    .FirstOrDefaultAsync(cancellationToken);
+                
+                if (existingOrder != null)
+                {
+                    logger.Warning("Table {TableNumber} already has active order {OrderNumber} for tenant {TenantId}, branch {BranchId}", 
+                        tableNumber, existingOrder.OrderNumber, tenantId, branchId);
+                    throw new InvalidOperationException(
+                        $"Table {tableNumber} already has an active order ({existingOrder.OrderNumber}). Please complete or cancel that order first.");
+                }
+            }
+
             // Generate order number
             var orderNumber = $"OM-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}";
 

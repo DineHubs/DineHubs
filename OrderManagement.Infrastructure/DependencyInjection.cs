@@ -51,6 +51,10 @@ using OrderManagement.Application.Receipts;
 using OrderManagement.Application.KPIs;
 using OrderManagement.Infrastructure.Receipts;
 using OrderManagement.Infrastructure.KPIs;
+using OrderManagement.Application.Printing;
+using OrderManagement.Application.Tables;
+using OrderManagement.Infrastructure.Printing;
+using OrderManagement.Infrastructure.Tables;
 
 namespace OrderManagement.Infrastructure;
 
@@ -164,6 +168,8 @@ public static class DependencyInjection
         services.AddScoped<IBranchService, BranchService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IMenuItemService, MenuItemService>();
+        services.AddScoped<IPrinterConfigurationService, PrinterConfigurationService>();
+        services.AddScoped<ITableService, TableService>();
 
         return services;
     }

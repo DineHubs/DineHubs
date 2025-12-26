@@ -1,4 +1,70 @@
-.floor-plan-container {
-  padding: 24px;
+.floor-canvas {
+  min-height: 500px;
+  
+  // Responsive height
+  @media (min-width: 768px) {
+    min-height: 600px;
+  }
 }
 
+.table-card {
+  // Add group hover behavior
+  &:hover {
+    .status-buttons {
+      opacity: 1;
+    }
+  }
+
+  // Transition for smooth animations
+  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+
+  // Drag cursor
+  &[draggable="true"] {
+    cursor: grab;
+    
+    &:active {
+      cursor: grabbing;
+    }
+  }
+}
+
+// Available table styling
+.table-available {
+  &:hover {
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+  }
+}
+
+// Occupied table styling
+.table-occupied {
+  &:hover {
+    box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+  }
+}
+
+// Reserved table styling
+.table-reserved {
+  &:hover {
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+  }
+}
+
+// Status buttons container
+.status-buttons {
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+// Animation for dragging
+.dragging {
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.5;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}

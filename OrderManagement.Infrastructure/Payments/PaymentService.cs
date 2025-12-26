@@ -62,10 +62,15 @@ public sealed class PaymentService(
             // For now, we'll mark it as captured immediately
             payment.MarkCaptured($"receipt-{orderId}-{DateTimeOffset.UtcNow:yyyyMMddHHmmss}.pdf");
 
-            // Update order status to Paid
-            order.UpdateStatus(OrderStatus.Paid);
-
             await dbContext.SaveChangesAsync(cancellationToken);
+
+            // Update order status to Paid using the service method for proper EF Core tracking
+            await orderService.UpdateOrderStatusAsync(
+                orderId,
+                OrderStatus.Paid,
+                tenantContext.TenantId,
+                tenantContext.BranchId,
+                cancellationToken);
 
             logger.Information("Processed payment {PaymentId} for order {OrderId} via {Provider} for tenant {TenantId}, branch {BranchId}",
                 payment.Id, orderId, provider, tenantContext.TenantId, tenantContext.BranchId);
@@ -113,7 +118,9 @@ public sealed class PaymentService(
             // For now, we'll just update the status
             payment.Refund(reason);
 
-            // If full refund, update order status
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            // If full refund, update order status using proper service method for EF Core tracking
             if (amount >= payment.Amount)
             {
                 var order = await orderService.GetOrderByIdAsync(
@@ -124,11 +131,14 @@ public sealed class PaymentService(
 
                 if (order != null && order.Status == OrderStatus.Paid)
                 {
-                    order.UpdateStatus(OrderStatus.Cancelled);
+                    await orderService.UpdateOrderStatusAsync(
+                        payment.OrderId,
+                        OrderStatus.Cancelled,
+                        tenantContext.TenantId,
+                        tenantContext.BranchId,
+                        cancellationToken);
                 }
             }
-
-            await dbContext.SaveChangesAsync(cancellationToken);
 
             logger.Information("Refunded payment {PaymentId} for order {OrderId} with reason: {Reason} for tenant {TenantId}, branch {BranchId}",
                 paymentId, payment.OrderId, reason, tenantContext.TenantId, tenantContext.BranchId);
@@ -164,7 +174,9 @@ public sealed class PaymentService(
             // Void payment
             payment.Void(reason);
 
-            // Update order status if needed
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            // Update order status if needed using proper service method for EF Core tracking
             var order = await orderService.GetOrderByIdAsync(
                 payment.OrderId,
                 tenantContext.TenantId,
@@ -174,17 +186,17 @@ public sealed class PaymentService(
             if (order != null && order.Status == OrderStatus.Paid)
             {
                 // Revert order status based on payment timing
-                if (order.PaymentTiming == PaymentTiming.PayBeforeKitchen)
-                {
-                    order.UpdateStatus(OrderStatus.Submitted);
-                }
-                else
-                {
-                    order.UpdateStatus(OrderStatus.Ready);
-                }
-            }
+                var newStatus = order.PaymentTiming == PaymentTiming.PayBeforeKitchen
+                    ? OrderStatus.Submitted
+                    : OrderStatus.Ready;
 
-            await dbContext.SaveChangesAsync(cancellationToken);
+                await orderService.UpdateOrderStatusAsync(
+                    payment.OrderId,
+                    newStatus,
+                    tenantContext.TenantId,
+                    tenantContext.BranchId,
+                    cancellationToken);
+            }
 
             logger.Information("Voided payment {PaymentId} for order {OrderId} with reason: {Reason} for tenant {TenantId}, branch {BranchId}",
                 paymentId, payment.OrderId, reason, tenantContext.TenantId, tenantContext.BranchId);

@@ -1,7 +1,245 @@
-<div class="floor-plan-container">
-  <h1>Table Management</h1>
-  <mat-card>
-    <p>Floor plan visualization coming soon...</p>
-  </mat-card>
+<div class="space-y-6">
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+    <div>
+      <h2 class="text-xl md:text-2xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark mb-1">
+        Floor Plan
+      </h2>
+      <p class="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark leading-relaxed">
+        @if (canConfigure()) {
+          Manage and arrange restaurant tables
+        } @else if (canChangeStatus()) {
+          View and update table status
+        } @else {
+          View table availability
+        }
+      </p>
+    </div>
+
+    <div class="flex items-center gap-3">
+      <!-- Branch Selector (Admin only) -->
+      @if (showBranchSelector() && branches().length > 0) {
+        <div class="relative">
+          <button
+            type="button"
+            class="px-4 py-2.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 flex items-center gap-2 min-w-[160px] justify-between"
+            (click)="toggleBranchDropdown()">
+            <span class="truncate">{{ selectedBranchName() }}</span>
+            <lucide-icon [name]="chevronDownIcon" size="18" class="text-text-secondary-light dark:text-text-secondary-dark flex-shrink-0"></lucide-icon>
+          </button>
+
+          @if (showBranchDropdown()) {
+            <div
+              class="absolute top-full left-0 mt-2 w-full min-w-[200px] bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark rounded-xl shadow-lg z-20 overflow-hidden">
+              @for (branch of branches(); track branch.id) {
+                <button
+                  type="button"
+                  class="w-full px-4 py-3 text-left hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-colors duration-150"
+                  [class.bg-primary]="selectedBranchId() === branch.id"
+                  [class.bg-opacity-10]="selectedBranchId() === branch.id"
+                  (click)="selectBranch(branch.id)">
+                  {{ branch.name }}
+                </button>
+              }
+            </div>
+          }
+        </div>
+      }
+
+      <!-- Refresh Button -->
+      <button
+        type="button"
+        class="p-2.5 rounded-xl bg-surface-light dark:bg-surface-dark border border-border-light dark:border-border-dark hover:bg-border-light dark:hover:bg-border-dark text-text-primary-light dark:text-text-primary-dark transition-all duration-200 active:scale-95"
+        (click)="refreshTables()"
+        title="Refresh tables">
+        <lucide-icon [name]="refreshIcon" size="20"></lucide-icon>
+      </button>
+
+      <!-- Manage Tables Button (Admin only) -->
+      @if (canConfigure()) {
+        <button
+          type="button"
+          class="px-4 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 flex items-center gap-2 shadow-md hover:shadow-lg"
+          (click)="navigateToTableManagement()">
+          <lucide-icon [name]="settingsIcon" size="18"></lucide-icon>
+          <span>Manage Tables</span>
+        </button>
+      }
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark p-4">
+    <div class="flex flex-wrap items-center gap-6">
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 rounded border-2 border-emerald-500 bg-emerald-50 dark:bg-emerald-900/20"></div>
+        <span class="text-sm text-text-primary-light dark:text-text-primary-dark">Available</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 rounded border-2 border-amber-500 bg-amber-50 dark:bg-amber-900/20"></div>
+        <span class="text-sm text-text-primary-light dark:text-text-primary-dark">Occupied</span>
+      </div>
+      <div class="flex items-center gap-2">
+        <div class="w-4 h-4 rounded border-2 border-blue-500 bg-blue-50 dark:bg-blue-900/20"></div>
+        <span class="text-sm text-text-primary-light dark:text-text-primary-dark">Reserved</span>
+      </div>
+      <div class="ml-auto text-sm text-text-secondary-light dark:text-text-secondary-dark">
+        @if (canConfigure()) {
+          Drag tables to reposition • Click to change status
+        } @else if (canChangeStatus()) {
+          Click to cycle status
+        } @else {
+          Click available table to start order
+        }
+      </div>
+    </div>
+  </div>
+
+  <!-- Loading State -->
+  @if (isLoading()) {
+    <div class="flex items-center justify-center py-24">
+      <div class="animate-spin rounded-full h-12 w-12 border-4 border-primary border-t-transparent"></div>
+    </div>
+  }
+
+  <!-- Floor Canvas -->
+  @else {
+    @if (tables().length === 0) {
+      <!-- Empty State -->
+      <div class="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg p-12 text-center">
+        <div class="p-4 rounded-full bg-primary/10 dark:bg-primary/20 inline-flex mb-4">
+          <lucide-icon [name]="gridIcon" size="48" class="text-primary"></lucide-icon>
+        </div>
+        <h3 class="text-lg md:text-xl font-bold leading-tight text-text-primary-light dark:text-text-primary-dark mb-2">
+          No tables configured
+        </h3>
+        <p class="text-sm md:text-base text-text-secondary-light dark:text-text-secondary-dark mb-6 leading-relaxed">
+          @if (canConfigure()) {
+            Get started by adding tables to this branch
+          } @else {
+            Contact your administrator to configure tables
+          }
+        </p>
+        @if (canConfigure()) {
+          <button
+            type="button"
+            class="px-6 py-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-semibold transition-all duration-200 active:scale-95 flex items-center gap-2 shadow-md hover:shadow-lg mx-auto"
+            (click)="navigateToTableManagement()">
+            <lucide-icon [name]="plusIcon" size="20"></lucide-icon>
+            <span>Add Tables</span>
+          </button>
+        }
+      </div>
+    } @else {
+      <!-- Tables Grid / Canvas -->
+      <div
+        class="floor-canvas relative bg-surface-light dark:bg-surface-dark rounded-2xl shadow-lg border border-border-light dark:border-border-dark min-h-[500px] p-6 overflow-auto"
+        [class.cursor-grabbing]="isDragging()"
+        (dragover)="onDragOver($event)"
+        (drop)="onDrop($event)">
+        
+        <!-- Grid Background Pattern -->
+        <div class="absolute inset-0 opacity-5 dark:opacity-10 pointer-events-none"
+          style="background-image: radial-gradient(circle, currentColor 1px, transparent 1px); background-size: 20px 20px;">
+        </div>
+
+        <!-- Tables -->
+        <div class="relative z-10 flex flex-wrap gap-4 justify-start">
+          @for (table of tables(); track table.id) {
+            <div
+              class="table-card relative rounded-xl border-2 transition-all duration-200 cursor-pointer hover:shadow-lg hover:scale-105 flex flex-col items-center justify-center"
+              [class]="getTableStatusBorderColor(table.status) + ' ' + getTableStatusBgColor(table.status)"
+              [class.cursor-grab]="canConfigure() && !isDragging()"
+              [class.cursor-grabbing]="isDragging() && draggedTable()?.id === table.id"
+              [class.opacity-50]="isDragging() && draggedTable()?.id === table.id"
+              [draggable]="canConfigure()"
+              [style.width.px]="table.width"
+              [style.height.px]="table.height"
+              (click)="onTableClick(table)"
+              (dragstart)="onDragStart($event, table)"
+              (dragend)="onDragEnd()">
+              
+              <!-- Table Number -->
+              <span class="text-lg font-bold text-text-primary-light dark:text-text-primary-dark">
+                {{ table.tableNumber }}
+              </span>
+
+              <!-- Status Badge -->
+              <span class="text-xs mt-1 px-2 py-0.5 rounded-full"
+                [class.bg-emerald-100]="table.status === TableStatus.Available"
+                [class.text-emerald-700]="table.status === TableStatus.Available"
+                [class.dark:bg-emerald-800]="table.status === TableStatus.Available"
+                [class.dark:text-emerald-200]="table.status === TableStatus.Available"
+                [class.bg-amber-100]="table.status === TableStatus.Occupied"
+                [class.text-amber-700]="table.status === TableStatus.Occupied"
+                [class.dark:bg-amber-800]="table.status === TableStatus.Occupied"
+                [class.dark:text-amber-200]="table.status === TableStatus.Occupied"
+                [class.bg-blue-100]="table.status === TableStatus.Reserved"
+                [class.text-blue-700]="table.status === TableStatus.Reserved"
+                [class.dark:bg-blue-800]="table.status === TableStatus.Reserved"
+                [class.dark:text-blue-200]="table.status === TableStatus.Reserved">
+                {{ table.statusName }}
+              </span>
+
+              <!-- Status Change Buttons (Admin/Manager only) -->
+              @if (canChangeStatus()) {
+                <div class="absolute -bottom-1 left-1/2 transform -translate-x-1/2 translate-y-full opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex gap-1 bg-surface-light dark:bg-surface-dark rounded-lg shadow-lg p-1 border border-border-light dark:border-border-dark z-20">
+                  <button
+                    type="button"
+                    class="w-6 h-6 rounded bg-emerald-500 hover:bg-emerald-600 flex items-center justify-center"
+                    title="Set Available"
+                    (click)="setTableStatus(table, TableStatus.Available); $event.stopPropagation()">
+                  </button>
+                  <button
+                    type="button"
+                    class="w-6 h-6 rounded bg-amber-500 hover:bg-amber-600 flex items-center justify-center"
+                    title="Set Occupied"
+                    (click)="setTableStatus(table, TableStatus.Occupied); $event.stopPropagation()">
+                  </button>
+                  <button
+                    type="button"
+                    class="w-6 h-6 rounded bg-blue-500 hover:bg-blue-600 flex items-center justify-center"
+                    title="Set Reserved"
+                    (click)="setTableStatus(table, TableStatus.Reserved); $event.stopPropagation()">
+                  </button>
+                </div>
+              }
+            </div>
+          }
+        </div>
+      </div>
+    }
+  }
+
+  <!-- Quick Stats -->
+  @if (tables().length > 0) {
+    <div class="grid grid-cols-3 gap-4">
+      <div class="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border border-emerald-200 dark:border-emerald-800">
+        <div class="text-2xl font-bold text-emerald-700 dark:text-emerald-300">
+          {{ availableTablesCount() }}
+        </div>
+        <div class="text-sm text-emerald-600 dark:text-emerald-400">Available</div>
+      </div>
+      <div class="bg-amber-50 dark:bg-amber-900/20 rounded-xl p-4 border border-amber-200 dark:border-amber-800">
+        <div class="text-2xl font-bold text-amber-700 dark:text-amber-300">
+          {{ occupiedTablesCount() }}
+        </div>
+        <div class="text-sm text-amber-600 dark:text-amber-400">Occupied</div>
+      </div>
+      <div class="bg-blue-50 dark:bg-blue-900/20 rounded-xl p-4 border border-blue-200 dark:border-blue-800">
+        <div class="text-2xl font-bold text-blue-700 dark:text-blue-300">
+          {{ reservedTablesCount() }}
+        </div>
+        <div class="text-sm text-blue-600 dark:text-blue-400">Reserved</div>
+      </div>
+    </div>
+  }
 </div>
 
+<!-- Click outside to close dropdown -->
+@if (showBranchDropdown()) {
+  <div
+    class="fixed inset-0 z-10"
+    (click)="closeBranchDropdown()">
+  </div>
+}
